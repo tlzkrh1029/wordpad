@@ -1200,6 +1200,47 @@ bool Editor_ScaleSelectedPicture(int percentX, int percentY)
     return true;
 }
 
+// Creates an embedded object (a new one of the given class, or one made from a file) and inserts it
+// at the selection. `show` opens a new object in its server application right away.
+static bool InsertOleObject(const CLSID& clsid, const wchar_t* file, bool createNew, bool show, HRESULT* result)
+{
+    bool ok = false;
+    HRESULT hr = E_FAIL;
+    IRichEditOle* ole = GetOle();
+    IOleClientSite* site = nullptr;
+    IStorage* stg = nullptr;
+    IOleObject* obj = nullptr;
+    if (ole && SUCCEEDED(hr = ole->GetClientSite(&site)) && g_callback && SUCCEEDED(hr = g_callback->GetNewStorage(&stg))) {
+        if (createNew)
+            hr = OleCreate(clsid, IID_IOleObject, OLERENDER_DRAW, nullptr, site, stg, (void**)&obj);
+        else
+            hr = OleCreateFromFile(CLSID_NULL, file, IID_IOleObject, OLERENDER_DRAW, nullptr, site, stg, (void**)&obj);
+        if (SUCCEEDED(hr) && obj) {
+            OleSetContainedObject(obj, TRUE);
+            REOBJECT reo = {};
+            reo.cbStruct = sizeof(reo);
+            reo.cp = REO_CP_SELECTION;
+            obj->GetUserClassID(&reo.clsid);
+            reo.poleobj = obj;
+            reo.pstg = stg;
+            reo.polesite = site;
+            reo.dvaspect = DVASPECT_CONTENT;
+            reo.dwFlags = REO_RESIZABLE | (createNew ? REO_BLANK : 0);
+            hr = ole->InsertObject(&reo);
+            if (SUCCEEDED(hr)) {
+                ok = true;
+                if (createNew && show) obj->DoVerb(OLEIVERB_SHOW, nullptr, site, 0, g.hEdit, nullptr);
+            }
+        }
+    }
+    if (obj) obj->Release();
+    if (stg) stg->Release();
+    if (site) site->Release();
+    if (ole) ole->Release();
+    if (result) *result = hr;
+    return ok;
+}
+
 bool Editor_InsertObjectDialog(HWND owner)
 {
     wchar_t file[MAX_PATH] = L"";
@@ -1215,41 +1256,12 @@ bool Editor_InsertObjectDialog(HWND owner)
         if (g.selfTest) SelfTest_Note(Fmt(L"OleUIInsertObject failed with code %u", rc).c_str());
         return false;
     }
+    return InsertOleObject(io.clsid, file, (io.dwFlags & IOF_SELECTCREATENEW) != 0, true, nullptr);
+}
 
-    bool ok = false;
-    IRichEditOle* ole = GetOle();
-    IOleClientSite* site = nullptr;
-    IStorage* stg = nullptr;
-    IOleObject* obj = nullptr;
-    if (ole && SUCCEEDED(ole->GetClientSite(&site)) && g_callback && SUCCEEDED(g_callback->GetNewStorage(&stg))) {
-        HRESULT hr;
-        bool createNew = (io.dwFlags & IOF_SELECTCREATENEW) != 0;
-        if (createNew)
-            hr = OleCreate(io.clsid, IID_IOleObject, OLERENDER_DRAW, nullptr, site, stg, (void**)&obj);
-        else
-            hr = OleCreateFromFile(CLSID_NULL, file, IID_IOleObject, OLERENDER_DRAW, nullptr, site, stg, (void**)&obj);
-        if (SUCCEEDED(hr) && obj) {
-            OleSetContainedObject(obj, TRUE);
-            REOBJECT reo = {};
-            reo.cbStruct = sizeof(reo);
-            reo.cp = REO_CP_SELECTION;
-            obj->GetUserClassID(&reo.clsid);
-            reo.poleobj = obj;
-            reo.pstg = stg;
-            reo.polesite = site;
-            reo.dvaspect = DVASPECT_CONTENT;
-            reo.dwFlags = REO_RESIZABLE | (createNew ? REO_BLANK : 0);
-            if (SUCCEEDED(ole->InsertObject(&reo))) {
-                ok = true;
-                if (createNew) obj->DoVerb(OLEIVERB_SHOW, nullptr, site, 0, g.hEdit, nullptr);
-            }
-        }
-    }
-    if (obj) obj->Release();
-    if (stg) stg->Release();
-    if (site) site->Release();
-    if (ole) ole->Release();
-    return ok;
+bool Editor_InsertObjectFromFile(const std::wstring& path, HRESULT* result)
+{
+    return InsertOleObject(CLSID_NULL, path.c_str(), false, false, result);
 }
 
 void Editor_BeginUndoGroup()

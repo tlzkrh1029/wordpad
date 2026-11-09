@@ -74,6 +74,7 @@ bool Editor_InsertPictureFile(const std::wstring& path);
 bool Editor_InsertPictureData(const BYTE* data, size_t size);   // PNG / JPEG / BMP / GIF / TIFF bytes
 bool Editor_PasteClipboardImage();    // returns false when the clipboard holds no (plain) image
 bool Editor_InsertObjectDialog(HWND owner);
+bool Editor_InsertObjectFromFile(const std::wstring& path, HRESULT* result);   // embeds a file as an object
 bool Editor_IsPictureSelected();
 bool Editor_GetSelectedPictureScale(int* widthTwips, int* heightTwips);
 bool Editor_ScaleSelectedPicture(int percentX, int percentY);

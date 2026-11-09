@@ -1205,6 +1205,48 @@ void TestHyperlinks()
 }
 
 // ---------------------------------------------------------------------------
+// Embedded objects
+// ---------------------------------------------------------------------------
+void TestObjects()
+{
+    Section("Embedded objects");
+    // A file without an OLE server becomes a "Package" object; this exercises the storage and the
+    // client site that the application hands to the rich edit control.
+    std::wstring path = PathIn(L"selftest-object.txt");
+    const char content[] = "Embedded by the RichPad self test.\r\n";
+    File_WriteAll(path, content, sizeof(content) - 1, nullptr);
+    NewDoc();
+    Type(L"Before  after");
+    Editor_SetSel(7, 7);
+    HRESULT hr = S_OK;
+    bool inserted = Editor_InsertObjectFromFile(path, &hr);
+    Pump(100);
+    int count = Editor_GetObjectCount();
+    CheckWin(inserted && count == 1, "a file is embedded as an object", "hr=0x%08lX, objects=%d", (unsigned long)hr, count);
+    if (inserted && count == 1) {
+        std::vector<BYTE> rtf;
+        File_Serialize(FMT_RTF, false, rtf);
+        std::string text(rtf.begin(), rtf.end());
+        Check(text.find("\\object") != std::string::npos && text.find("\\objdata") != std::string::npos,
+              "the object is stored in the RTF", "%u bytes", (unsigned)rtf.size());
+        NewDoc();
+        DocFormat fmt = FMT_TEXT_UTF8;
+        bool loaded = File_LoadData(rtf, L"x.rtf", &fmt, nullptr) == LOAD_OK;
+        Check(loaded && Editor_GetObjectCount() == 1, "the object survives an RTF round trip", "objects=%d", Editor_GetObjectCount());
+        // Other formats keep the picture of the object.
+        std::vector<BYTE> docx;
+        bool exported = File_Serialize(FMT_DOCX, false, docx);
+        NewDoc();
+        bool reloaded = exported && File_LoadData(docx, L"x.docx", &fmt, nullptr) == LOAD_OK;
+        std::wstring text2 = Normalize(Editor_GetText(false));
+        Check(reloaded && text2.find(L"Before") != std::wstring::npos && text2.find(L"after") != std::wstring::npos,
+              "a document with an object can be saved as DOCX", "%u bytes, length %ld", (unsigned)docx.size(), Editor_GetTextLength());
+    }
+    DeleteFileW(path.c_str());
+    NewDoc();
+}
+
+// ---------------------------------------------------------------------------
 // Modal dialogs
 // ---------------------------------------------------------------------------
 // The dialogs of the system (font, page setup, print, file, OLE dialogs, task dialog) and the modal
@@ -1369,7 +1411,7 @@ int SelfTest_Run(const wchar_t* logPath)
     typedef void (*TestFn)();
     const TestFn tests[] = { TestEnvironment, TestCharacterFormatting, TestParagraphFormatting, TestRoundTrips, TestFindReplace,
                              TestUndo, TestTyping, TestGeometry, TestPictures, TestClipboard, TestConverters, TestHyperlinks,
-                             TestPrinting, TestModalDialogs, TestUserInterface };
+                             TestObjects, TestPrinting, TestModalDialogs, TestUserInterface };
     for (TestFn fn : tests) {
         fn();
         // Keep a partial report on disk in case a later test crashes.

@@ -1,5 +1,6 @@
 // Loading and saving documents.
 #include "fileio.h"
+#include <exception>
 #include "editor.h"
 #include "imaging.h"
 #include "convert/convert.h"
@@ -222,9 +223,13 @@ LoadResult File_LoadData(const std::vector<BYTE>& data, const std::wstring& name
         conv::Container kind = conv::DetectContainer(bytes);
         std::string rtf, error;
         bool ok = false;
-        if (kind == conv::Container::Docx) ok = conv::DocxToRtf(bytes, rtf, &error);
-        else if (kind == conv::Container::Odt) ok = conv::OdtToRtf(bytes, rtf, &error);
-        else return LOAD_UNSUPPORTED;
+        if (kind == conv::Container::Unknown) return LOAD_UNSUPPORTED;
+        // A damaged package can expand to an enormous document; running out of memory is a failed load.
+        try {
+            ok = kind == conv::Container::Docx ? conv::DocxToRtf(bytes, rtf, &error) : conv::OdtToRtf(bytes, rtf, &error);
+        } catch (const std::exception&) {
+            ok = false;
+        }
         if (!ok || !LoadRtf(rtf.data(), rtf.size())) return LOAD_FAILED;
         *format = kind == conv::Container::Docx ? FMT_DOCX : FMT_ODT;
         return LOAD_OK;
@@ -308,7 +313,12 @@ bool File_Serialize(DocFormat format, bool utf8Bom, std::vector<BYTE>& out)
         conv::SetExportPage(page);
         conv::Bytes bytes;
         std::string error;
-        bool ok = format == FMT_DOCX ? conv::RtfToDocx(rtf, bytes, &error) : conv::RtfToOdt(rtf, bytes, &error);
+        bool ok = false;
+        try {
+            ok = format == FMT_DOCX ? conv::RtfToDocx(rtf, bytes, &error) : conv::RtfToOdt(rtf, bytes, &error);
+        } catch (const std::exception&) {
+            ok = false;
+        }
         if (!ok) return false;
         out.assign(bytes.begin(), bytes.end());
         return true;

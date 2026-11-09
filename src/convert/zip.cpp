@@ -404,6 +404,11 @@ bool ZipReader::Read(const std::string& name, Bytes& out) const
 
 bool ZipReader::ReadText(const std::string& name, std::string& out) const
 {
+    // Markup parts are parsed into a tree that needs many times their size: 64 MB of XML is far more
+    // than any real document has, and keeps a "ZIP bomb" from exhausting the memory.
+    const uint32_t kMaxTextSize = 64u * 1024u * 1024u;
+    auto it = m_entries.find(name);
+    if (it == m_entries.end() || it->second.size > kMaxTextSize) return false;
     Bytes data;
     if (!Read(name, data)) return false;
     out.assign(data.begin(), data.end());

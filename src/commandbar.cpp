@@ -110,10 +110,10 @@ void BuildItems()
     {   // Clipboard
         Group g; g.label = S_GROUP_CLIPBOARD;
         Column paste; paste.rows.push_back(Row{ { AddItem(ID_EDIT_PASTE, ICON_PASTE, S_BTN_PASTE, S_TIP_PASTE, K_SPLIT, SZ_LARGE, ID_EDIT_PASTE_MENU) } });
-        Column small;
-        small.rows.push_back(Row{ { AddItem(ID_EDIT_CUT, ICON_CUT, S_BTN_CUT, S_TIP_CUT, K_BUTTON, SZ_ICONTEXT) } });
-        small.rows.push_back(Row{ { AddItem(ID_EDIT_COPY, ICON_COPY, S_BTN_COPY, S_TIP_COPY, K_BUTTON, SZ_ICONTEXT) } });
-        g.cols.push_back(paste); g.cols.push_back(small);
+        Column stack;
+        stack.rows.push_back(Row{ { AddItem(ID_EDIT_CUT, ICON_CUT, S_BTN_CUT, S_TIP_CUT, K_BUTTON, SZ_ICONTEXT) } });
+        stack.rows.push_back(Row{ { AddItem(ID_EDIT_COPY, ICON_COPY, S_BTN_COPY, S_TIP_COPY, K_BUTTON, SZ_ICONTEXT) } });
+        g.cols.push_back(paste); g.cols.push_back(stack);
         s.groups.push_back(g);
     }
     {   // Font

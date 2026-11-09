@@ -499,9 +499,17 @@ void Dlg_Font(HWND owner)
         if (lf.lfWeight >= FW_SEMIBOLD) out.dwEffects |= CFE_BOLD;
         if (lf.lfItalic) out.dwEffects |= CFE_ITALIC;
     }
-    out.dwMask |= CFM_UNDERLINE | CFM_STRIKEOUT;
-    if (lf.lfUnderline) out.dwEffects |= CFE_UNDERLINE;
-    if (lf.lfStrikeOut) out.dwEffects |= CFE_STRIKEOUT;
+    // The check boxes cannot show a mixed state: when only a part of the selection is underlined (or
+    // struck out) the effect is left alone unless the box was ticked.
+    if ((cf.dwMask & CFM_UNDERLINE) || lf.lfUnderline) {
+        out.dwMask |= CFM_UNDERLINE | CFM_UNDERLINETYPE;
+        if (lf.lfUnderline) out.dwEffects |= CFE_UNDERLINE;
+        out.bUnderlineType = lf.lfUnderline ? CFU_UNDERLINE : CFU_UNDERLINENONE;
+    }
+    if ((cf.dwMask & CFM_STRIKEOUT) || lf.lfStrikeOut) {
+        out.dwMask |= CFM_STRIKEOUT;
+        if (lf.lfStrikeOut) out.dwEffects |= CFE_STRIKEOUT;
+    }
     if (!(wasAuto && ch.rgbColors == initial)) {
         out.dwMask |= CFM_COLOR;
         out.crTextColor = ch.rgbColors;

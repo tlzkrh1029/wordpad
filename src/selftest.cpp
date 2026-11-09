@@ -1170,6 +1170,147 @@ void TestHyperlinks()
     NewDoc();
 }
 
+// ---------------------------------------------------------------------------
+// Modal dialogs
+// ---------------------------------------------------------------------------
+// The dialogs of the system (font, page setup, print, file, OLE dialogs, task dialog) and the modal
+// dialogs of the application run their own message loop.  A thread timer keeps firing inside that
+// loop: it looks for the dialog, saves a screenshot and cancels it.
+
+struct DialogProbe {
+    bool active = false;
+    const wchar_t* name = L"";
+    HWND hwnd = nullptr;        // dialog seen most recently
+    int ticks = 0, seenAt = 0;
+    int seen = 0;               // number of dialogs that appeared
+    int children = 0;
+    std::wstring title, cls;
+};
+DialogProbe g_dialogProbe;
+
+BOOL CALLBACK FindModalProc(HWND hwnd, LPARAM lp)
+{
+    if (!IsWindowVisible(hwnd) || !IsWindowEnabled(hwnd)) return TRUE;
+    if (hwnd == g.hMain || hwnd == g.hFindDlg || hwnd == g.hPreview) return TRUE;
+    for (HWND owner = GetWindow(hwnd, GW_OWNER); owner; owner = GetWindow(owner, GW_OWNER)) {
+        if (owner == g.hMain) { *(HWND*)lp = hwnd; return FALSE; }
+    }
+    return TRUE;
+}
+
+HWND FindModalDialog()
+{
+    if (IsWindowEnabled(g.hMain)) return nullptr;      // a modal dialog disables its owner
+    HWND found = nullptr;
+    EnumThreadWindows(GetCurrentThreadId(), FindModalProc, (LPARAM)&found);
+    return found;
+}
+
+BOOL CALLBACK CountChildProc(HWND, LPARAM lp) { ++*(int*)lp; return TRUE; }
+
+void CALLBACK DialogProbeTimer(HWND, UINT, UINT_PTR, DWORD)
+{
+    DialogProbe& p = g_dialogProbe;
+    if (!p.active) return;
+    ++p.ticks;
+    HWND dlg = FindModalDialog();
+    if (!dlg) {
+        // The command neither returned nor showed a dialog that can be found: give up.
+        if (p.ticks > 150) {
+            Line("FAIL  dialog %s: no dialog appeared and the command did not return", U8(p.name).c_str());
+            Flush();
+            ExitProcess(3);
+        }
+        return;
+    }
+    if (dlg != p.hwnd) {
+        p.hwnd = dlg;
+        p.seenAt = p.ticks;
+        ++p.seen;
+        wchar_t buf[256] = L"";
+        GetWindowTextW(dlg, buf, 256);
+        p.title = buf;
+        GetClassNameW(dlg, buf, 256);
+        p.cls = buf;
+        p.children = 0;
+        EnumChildWindows(dlg, CountChildProc, (LPARAM)&p.children);
+        return;                     // give it time to paint
+    }
+    int age = p.ticks - p.seenAt;
+    if (age == 2) {
+        std::wstring file = std::wstring(L"selftest-modal-") + p.name + (p.seen > 1 ? L"-" + std::to_wstring(p.seen) : L"") + L".png";
+        SaveWindowPng(dlg, file.c_str());
+        PostMessageW(dlg, WM_COMMAND, IDCANCEL, 0);
+    } else if (age == 12) {
+        PostMessageW(dlg, WM_CLOSE, 0, 0);
+    } else if (age == 22) {
+        EndDialog(dlg, IDCANCEL);
+    } else if (age > 60) {
+        Line("FAIL  dialog %s: \"%s\" (%s) could not be closed", U8(p.name).c_str(), U8(p.title).c_str(), U8(p.cls).c_str());
+        Flush();
+        ExitProcess(3);
+    }
+}
+
+// Runs a command that shows a modal dialog and reports what appeared.
+template <typename Fn>
+void ProbeDialog(const wchar_t* name, int minChildren, bool wineKnownBroken, Fn run)
+{
+    std::string label = "dialog opens: " + U8(name);
+    if (g_wine && wineKnownBroken) {
+        ++g_skip;
+        Line("SKIP  %s  -- crashes inside Wine's implementation", label.c_str());
+        return;
+    }
+    DialogProbe& p = g_dialogProbe;
+    p = DialogProbe();
+    p.name = name;
+    p.active = true;
+    UINT_PTR timer = SetTimer(nullptr, 0, 150, DialogProbeTimer);
+    run();
+    KillTimer(nullptr, timer);
+    p.active = false;
+    Pump(50);
+    bool ok = p.seen >= 1 && p.children >= minChildren && IsWindowEnabled(g.hMain);
+    CheckWin(ok, label.c_str(), "%d shown, \"%s\" (%s), %d child windows", p.seen, U8(p.title).c_str(), U8(p.cls).c_str(), p.children);
+    Flush();
+}
+
+void TestModalDialogs()
+{
+    Section("Modal dialogs");
+    NewDoc();
+    Type(L"Dialog test text");
+    Editor_SetSel(0, 6);
+    SendMessageW(g.hEdit, WM_COPY, 0, 0);
+    Pump(50);
+
+    ProbeDialog(L"font", 8, false, [] { App_OnCommand(ID_FORMAT_FONT); });
+    ProbeDialog(L"paragraph", 6, false, [] { App_OnCommand(ID_FORMAT_PARAGRAPH); });
+    ProbeDialog(L"tabs", 4, false, [] { App_OnCommand(ID_FORMAT_TABS); });
+    ProbeDialog(L"date-time", 3, false, [] { App_OnCommand(ID_INSERT_DATETIME); });
+    ProbeDialog(L"about", 3, false, [] { App_OnCommand(ID_HELP_ABOUT); });
+    ProbeDialog(L"shortcuts", 2, false, [] { App_OnCommand(ID_HELP_SHORTCUTS); });
+    ProbeDialog(L"page-setup", 8, false, [] { App_OnCommand(ID_FILE_PAGESETUP); });
+    ProbeDialog(L"print", 4, false, [] { App_OnCommand(ID_FILE_PRINT); });
+    ProbeDialog(L"paste-special", 4, true, [] { App_OnCommand(ID_EDIT_PASTESPECIAL); });
+    ProbeDialog(L"insert-object", 4, false, [] { App_OnCommand(ID_INSERT_OBJECT); });
+    ProbeDialog(L"insert-picture", 4, false, [] { App_OnCommand(ID_INSERT_PICTURE); });
+    ProbeDialog(L"save-as", 4, false, [] { App_OnCommand(ID_FILE_SAVEAS); });
+
+    // The remaining two ask before they discard the document.
+    static bool answer = true;
+    g.selfTest = false;
+    Editor_SetModified(true);
+    ProbeDialog(L"save-changes", 0, false, [] { answer = App_QuerySave(); });
+    g.selfTest = true;
+    Check(!answer, "cancelling the save prompt keeps the document");
+    Editor_SetModified(false);
+    ProbeDialog(L"open", 4, false, [] { App_OnCommand(ID_FILE_OPEN); });
+    Check(Normalize(Editor_GetText(false)) == L"Dialog test text", "cancelled dialogs leave the document unchanged", "%s", U8(Normalize(Editor_GetText(false))).c_str());
+    NewDoc();
+}
+
 } // namespace
 
 void SelfTest_Note(const wchar_t* text)
@@ -1194,7 +1335,7 @@ int SelfTest_Run(const wchar_t* logPath)
     typedef void (*TestFn)();
     const TestFn tests[] = { TestEnvironment, TestCharacterFormatting, TestParagraphFormatting, TestRoundTrips, TestFindReplace,
                              TestUndo, TestTyping, TestGeometry, TestPictures, TestClipboard, TestConverters, TestHyperlinks,
-                             TestPrinting, TestUserInterface };
+                             TestPrinting, TestModalDialogs, TestUserInterface };
     for (TestFn fn : tests) {
         fn();
         // Keep a partial report on disk in case a later test crashes.

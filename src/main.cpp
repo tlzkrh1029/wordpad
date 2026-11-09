@@ -316,7 +316,16 @@ void UpdateStatus()
     parts.push_back(Fmt(S(S_STATUS_LINECOL), line + 1, std::max<LONG>(0, cr.cpMin - lineStart) + 1));
     if (g_wordCount >= 0) parts.push_back(Fmt(S(S_STATUS_WORDS), FormatNumber(g_wordCount).c_str()));
     parts.push_back(Fmt(S(S_STATUS_CHARS), FormatNumber(g_charCount).c_str()));
-    if (cr.cpMax > cr.cpMin) parts.push_back(Fmt(S(S_STATUS_SELECTED), FormatNumber(cr.cpMax - cr.cpMin).c_str()));
+    if (cr.cpMax > cr.cpMin) {
+        long long selected = cr.cpMax - cr.cpMin;
+        if (selected <= 100000) {
+            // Counted like the document total: visible characters without paragraph marks.
+            selected = 0;
+            for (wchar_t c : Editor_GetText(true, true))
+                if (c != L'\r' && c != L'\n') ++selected;
+        }
+        parts.push_back(Fmt(S(S_STATUS_SELECTED), FormatNumber(selected).c_str()));
+    }
     StatusBar_SetParts(parts);
     StatusBar_SetZoom(Editor_GetZoom());
 }
@@ -378,6 +387,8 @@ void DoPasteSpecial()
     UINT rc = OleUIPasteSpecialW(&ps);
     if (rc == OLEUI_OK && ps.nSelectedIndex >= 0 && ps.nSelectedIndex < (int)ARRAYSIZE(entries))
         SendMessageW(g.hEdit, EM_PASTESPECIAL, entries[ps.nSelectedIndex].fmtetc.cfFormat, 0);
+    else if (rc != OLEUI_OK && rc != OLEUI_CANCEL && g.selfTest)
+        SelfTest_Note(Fmt(L"OleUIPasteSpecial failed with code %u", rc).c_str());
     if (ps.lpSrcDataObj) ps.lpSrcDataObj->Release();
 }
 

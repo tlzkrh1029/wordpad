@@ -1,6 +1,7 @@
 // The rich edit control and all formatting operations on it.
 #include "gfx.h"
 #include "editor.h"
+#include "selftest.h"
 #include "theme.h"
 #include "imaging.h"
 #include <richole.h>
@@ -1210,7 +1211,10 @@ bool Editor_InsertObjectDialog(HWND owner)
     io.cchFile = ARRAYSIZE(file);
     UINT rc = OleUIInsertObjectW(&io);
     if (rc == OLEUI_CANCEL) return true;
-    if (rc != OLEUI_OK) return false;
+    if (rc != OLEUI_OK) {
+        if (g.selfTest) SelfTest_Note(Fmt(L"OleUIInsertObject failed with code %u", rc).c_str());
+        return false;
+    }
 
     bool ok = false;
     IRichEditOle* ole = GetOle();

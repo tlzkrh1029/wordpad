@@ -133,7 +133,8 @@ cmake --build build-mingw --parallel
 | `src/dialogs.cpp`, `src/print.cpp` | 대화 상자, 인쇄와 인쇄 미리 보기 |
 | `src/theme.cpp`, `src/strings.def` | 밝은 테마와 어두운 테마, 한국어와 영어 문자열 |
 | `src/convert/` | ZIP, XML, RTF, DOCX, ODT 읽기와 쓰기(운영 체제에 의존하지 않음) |
-| `src/selftest.cpp`, `tests/` | 자체 시험과 변환기 단위 시험 |
+| `src/selftest.cpp`, `tests/` | 자체 시험, 변환기 단위 시험과 퍼징 도구 |
+| `res/`, `tools/make_icon.py` | 아이콘, 매니페스트, 대화 상자 리소스와 아이콘 생성 스크립트 |
 
 ## 알려진 제한 사항
 

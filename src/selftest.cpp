@@ -853,6 +853,13 @@ void TestUserInterface()
     shot = SaveWindowPng(g.hMain, L"selftest-dark.png");
     Check(shot, "screenshot (dark)");
     Flush();
+    // The print preview follows the theme as well (the page itself stays white).
+    int previewPages = Print_PreviewSelfTest([](HWND preview, const wchar_t* name) {
+        Pump(150);
+        if (lstrcmpW(name, L"one-page") == 0) SaveWindowPng(preview, L"selftest-preview-dark.png");
+    });
+    Check(previewPages >= 1 && !g.hPreview, "print preview in the dark theme", "%d pages", previewPages);
+    Flush();
     App_OnCommand(ID_VIEW_LANG_EN);
     App_OnCommand(ID_VIEW_THEME_LIGHT);
     Pump(200);

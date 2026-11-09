@@ -55,5 +55,17 @@ else()
   set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -c 65001")
 endif()
 
-# Portable unit tests for the document converters (also buildable natively).
-option(RICHPAD_BUILD_TESTS "Build converter unit tests" OFF)
+# Unit tests for the document converters. They do not depend on Windows; see tests/run_convert_tests.sh
+# for building them natively on other systems.
+option(RICHPAD_BUILD_TESTS "Build the converter unit tests" OFF)
+if(RICHPAD_BUILD_TESTS)
+  add_executable(convert_test tests/convert_test.cpp
+    src/convert/zip.cpp src/convert/xml.cpp src/convert/model.cpp src/convert/rtf_reader.cpp
+    src/convert/rtf_writer.cpp src/convert/docx.cpp src/convert/odt.cpp)
+  target_include_directories(convert_test PRIVATE src)
+  if(MSVC)
+    target_compile_options(convert_test PRIVATE /utf-8 /EHsc)
+  endif()
+  enable_testing()
+  add_test(NAME convert_test COMMAND convert_test)
+endif()

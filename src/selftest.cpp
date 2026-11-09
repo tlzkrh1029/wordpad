@@ -860,11 +860,18 @@ void TestConverters()
         App_OnCommand(ID_FORMAT_ALIGN_RIGHT);
         Editor_SetSel(Editor_GetTextLength(), Editor_GetTextLength());
         Type(L" ");
+        // Wine's rich edit control cannot write pictures back out (its RTF simply stops there).
         std::vector<BYTE> png = MakeTestPng(64, 48);
-        bool withPicture = Editor_InsertPictureData(png.data(), png.size());
+        bool withPicture = !g_wine && Editor_InsertPictureData(png.data(), png.size());
         std::wstring before = Normalize(Editor_GetText(false));
         LONG lengthBefore = Editor_GetTextLength();
 
+        if (k.format == FMT_DOCX) {
+            // Keep the RTF the control produced; it is the input of the converters.
+            std::vector<BYTE> source;
+            if (File_Serialize(FMT_RTF, false, source))
+                File_WriteAll(PathIn(L"selftest-sample.rtf"), source.data(), source.size(), nullptr);
+        }
         std::vector<BYTE> bytes;
         bool saved = File_Serialize(k.format, false, bytes) && bytes.size() > 500 && bytes[0] == 'P' && bytes[1] == 'K';
         Check(saved, (std::string(k.name) + ": document is written").c_str(), "%u bytes", (unsigned)bytes.size());
@@ -875,8 +882,15 @@ void TestConverters()
         DocFormat got = FMT_RTF;
         LoadResult r = File_LoadData(bytes, L"x", &got, nullptr);
         Check(r == LOAD_OK && got == k.format, (std::string(k.name) + ": document is detected and loaded").c_str(), "result=%d format=%d", (int)r, (int)got);
-        std::wstring afterText = Normalize(Editor_GetText(false));
-        Check(afterText == before, (std::string(k.name) + ": text round trip").c_str(), "%s", U8(afterText).c_str());
+        // Pictures are checked separately below; compare the text without their placeholder character.
+        auto withoutObjects = [](std::wstring t) {
+            t.erase(std::remove(t.begin(), t.end(), (wchar_t)0xFFFC), t.end());
+            return t;
+        };
+        std::wstring afterText = withoutObjects(Normalize(Editor_GetText(false)));
+        std::wstring beforeText = withoutObjects(before);
+        Check(afterText == beforeText, (std::string(k.name) + ": text round trip").c_str(), "%u characters (expected %u)",
+              (unsigned)afterText.size(), (unsigned)beforeText.size());
         Check(Has(CharFormatAt(p2 + 16, p2 + 18), CFM_BOLD, CFE_BOLD), (std::string(k.name) + ": bold round trip").c_str());
         Check(Has(CharFormatAt(p2 + 25, p2 + 29), CFM_ITALIC, CFE_ITALIC), (std::string(k.name) + ": italic round trip").c_str());
         Check(!Has(CharFormatAt(p2 + 1, p2 + 3), CFM_BOLD, CFE_BOLD), (std::string(k.name) + ": regular text stays regular").c_str());
@@ -891,6 +905,44 @@ void TestConverters()
                      lengthAfter, lengthBefore, Editor_GetObjectCount());
         }
     }
+}
+
+void TestHyperlinks()
+{
+    Section("Hyperlinks");
+    // A document with a hyperlink, as the DOCX / ODT readers hand it to the control.
+    const char* rtf =
+        "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fnil\\fcharset0 Calibri;}}{\\colortbl ;\\red0\\green0\\blue255;}"
+        "\\pard\\plain\\f0\\fs22 {\\plain\\f0\\fs22 Visit }"
+        "{\\field{\\*\\fldinst{HYPERLINK \"https://example.com/docs\"}}{\\fldrslt{{\\plain\\f0\\fs22\\ul\\cf1 the site}}}}"
+        "{\\plain\\f0\\fs22  today.}\\par}";
+    std::vector<BYTE> data(rtf, rtf + strlen(rtf));
+    NewDoc();
+    DocFormat fmt = FMT_TEXT_UTF8;
+    bool loaded = File_LoadData(data, L"x.rtf", &fmt, nullptr) == LOAD_OK;
+    std::wstring text = Editor_GetText(false);
+    Line("text after loading: \"%s\"", U8(Normalize(text)).c_str());
+    Check(loaded && text.find(L"Visit ") != std::wstring::npos && text.find(L" today.") != std::wstring::npos, "text around the link is kept");
+    CheckWin(text.find(L"the site") != std::wstring::npos, "link text is visible");
+
+    // Saving keeps the link target so it survives a DOCX round trip.
+    std::vector<BYTE> out;
+    File_Serialize(FMT_RTF, false, out);
+    std::string saved(out.begin(), out.end());
+    CheckWin(saved.find("example.com/docs") != std::string::npos, "link target is written back to RTF", "%u bytes", (unsigned)out.size());
+    std::vector<BYTE> docx;
+    bool exported = File_Serialize(FMT_DOCX, false, docx);
+    NewDoc();
+    bool reloaded = exported && File_LoadData(docx, L"x.docx", &fmt, nullptr) == LOAD_OK;
+    std::wstring again = Editor_GetText(false);
+    CheckWin(reloaded && again.find(L"the site") != std::wstring::npos, "link survives a DOCX round trip", "\"%s\"", U8(Normalize(again)).c_str());
+
+    // Plain URLs are detected automatically.
+    NewDoc();
+    Type(L"See https://example.org for details");
+    Pump(100);
+    CHARFORMAT2W cf = CharFormatAt(8, 12);
+    CheckWin((cf.dwMask & CFM_LINK) && (cf.dwEffects & CFE_LINK), "typed URLs become links");
 }
 
 } // namespace
@@ -916,7 +968,8 @@ int SelfTest_Run(const wchar_t* logPath)
 
     typedef void (*TestFn)();
     const TestFn tests[] = { TestEnvironment, TestCharacterFormatting, TestParagraphFormatting, TestRoundTrips, TestFindReplace,
-                             TestUndo, TestGeometry, TestPictures, TestClipboard, TestConverters, TestPrinting, TestUserInterface };
+                             TestUndo, TestGeometry, TestPictures, TestClipboard, TestConverters, TestHyperlinks, TestPrinting,
+                             TestUserInterface };
     for (TestFn fn : tests) {
         fn();
         // Keep a partial report on disk in case a later test crashes.

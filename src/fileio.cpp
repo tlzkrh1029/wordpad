@@ -3,6 +3,7 @@
 #include "editor.h"
 #include "imaging.h"
 #include "convert/convert.h"
+#include "convert/model.h"
 
 namespace {
 
@@ -32,6 +33,38 @@ bool PictureHook(const conv::PictureRequest& req, conv::PictureResult& res)
     res.png.assign(png.begin(), png.end());
     res.widthPx = w;
     res.heightPx = h;
+    return true;
+}
+
+// Code page conversion for the RTF reader / writer (font names and text in legacy code pages).
+bool DecodeHook(unsigned codePage, const std::string& bytes, std::string& utf8)
+{
+    utf8.clear();
+    if (bytes.empty()) return true;
+    UINT cp = codePage ? codePage : CP_ACP;
+    int wlen = MultiByteToWideChar(cp, 0, bytes.data(), (int)bytes.size(), nullptr, 0);
+    if (wlen <= 0) return false;
+    std::wstring wide((size_t)wlen, L'\0');
+    MultiByteToWideChar(cp, 0, bytes.data(), (int)bytes.size(), &wide[0], wlen);
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide.data(), wlen, nullptr, 0, nullptr, nullptr);
+    utf8.resize((size_t)len);
+    if (len > 0) WideCharToMultiByte(CP_UTF8, 0, wide.data(), wlen, &utf8[0], len, nullptr, nullptr);
+    return true;
+}
+
+bool EncodeHook(unsigned codePage, const std::string& utf8, std::string& bytes)
+{
+    bytes.clear();
+    if (utf8.empty()) return true;
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), (int)utf8.size(), nullptr, 0);
+    if (wlen <= 0) return false;
+    std::wstring wide((size_t)wlen, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), (int)utf8.size(), &wide[0], wlen);
+    BOOL usedDefault = FALSE;
+    int len = WideCharToMultiByte(codePage, WC_NO_BEST_FIT_CHARS, wide.data(), wlen, nullptr, 0, nullptr, &usedDefault);
+    if (len <= 0 || usedDefault) return false;
+    bytes.resize((size_t)len);
+    WideCharToMultiByte(codePage, WC_NO_BEST_FIT_CHARS, wide.data(), wlen, &bytes[0], len, nullptr, nullptr);
     return true;
 }
 
@@ -128,6 +161,7 @@ bool WriteDirect(const std::wstring& path, const void* data, size_t size, DWORD*
 void File_Init()
 {
     conv::SetPictureConverter(PictureHook);
+    conv::SetCodePageHooks(DecodeHook, EncodeHook);
 }
 
 bool File_ReadAll(const std::wstring& path, std::vector<BYTE>& data, DWORD* err)
@@ -263,6 +297,15 @@ bool File_Serialize(DocFormat format, bool utf8Bom, std::vector<BYTE>& out)
             out.assign(rtf.begin(), rtf.end());
             return true;
         }
+        // Exported documents carry the current page setup.
+        conv::PageSetup page;
+        page.width = g.cfg.paper.cx;
+        page.height = g.cfg.paper.cy;
+        page.left = g.cfg.margins.left;
+        page.top = g.cfg.margins.top;
+        page.right = g.cfg.margins.right;
+        page.bottom = g.cfg.margins.bottom;
+        conv::SetExportPage(page);
         conv::Bytes bytes;
         std::string error;
         bool ok = format == FMT_DOCX ? conv::RtfToDocx(rtf, bytes, &error) : conv::RtfToOdt(rtf, bytes, &error);

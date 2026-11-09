@@ -740,6 +740,29 @@ void DialogVisitor(HWND dlg, const wchar_t* name)
     SaveWindowPng(dlg, (std::wstring(L"selftest-dialog-") + name + L".png").c_str());
 }
 
+// Counts the items of a menu (and of its submenus) that share an access key with an earlier item.
+int CountMnemonicClashes(HMENU menu, const char* lang)
+{
+    int clashes = 0;
+    std::wstring seen;
+    int count = GetMenuItemCount(menu);
+    for (int i = 0; i < count; ++i) {
+        wchar_t text[160] = L"";
+        if (GetMenuStringW(menu, (UINT)i, text, 160, MF_BYPOSITION) <= 0) continue;
+        wchar_t key = GetMnemonic(text);
+        if (key) {
+            key = (wchar_t)(UINT_PTR)CharUpperW((LPWSTR)(UINT_PTR)key);
+            if (seen.find(key) != std::wstring::npos) {
+                ++clashes;
+                Line("duplicate access key '%s' (%s): %s", U8(std::wstring(1, key)).c_str(), lang, U8(text).c_str());
+            }
+            seen += key;
+        }
+        if (HMENU sub = GetSubMenu(menu, i)) clashes += CountMnemonicClashes(sub, lang);
+    }
+    return clashes;
+}
+
 void TestUserInterface()
 {
     Section("User interface");
@@ -769,8 +792,13 @@ void TestUserInterface()
     int savedLang = g.cfg.lang, savedTheme = g.cfg.theme;
     App_OnCommand(ID_VIEW_LANG_EN);
     Check(!Strings_IsKorean() && lstrcmpW(S(S_MENU_FILE), L"&File") == 0, "English user interface");
+    int clashesEn = 0;
+    for (HMENU m : g.hMenus) clashesEn += CountMnemonicClashes(m, "en");
     App_OnCommand(ID_VIEW_LANG_KO);
     Check(Strings_IsKorean() && lstrcmpW(S(S_MENU_FILE), L"\xD30C\xC77C(&F)") == 0, "Korean user interface");
+    int clashesKo = 0;
+    for (HMENU m : g.hMenus) clashesKo += CountMnemonicClashes(m, "ko");
+    Check(clashesEn == 0 && clashesKo == 0, "access keys are unique within every menu", "%d clashes (en), %d (ko)", clashesEn, clashesKo);
     wchar_t item[128] = L"";
     GetMenuStringW(g.hMenus[0], ID_FILE_OPEN, item, 128, MF_BYCOMMAND);
     Check(wcsstr(item, L"\xC5F4\xAE30") != nullptr, "menus are rebuilt in the selected language", "%s", U8(item).c_str());

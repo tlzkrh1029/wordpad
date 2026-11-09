@@ -95,7 +95,7 @@ X(S_FORMAT_LIST_LROMAN, L"로마 숫자 소문자 i. ii. iii.(&I)",L"Lowercase R
 X(S_FORMAT_LIST_UROMAN, L"로마 숫자 대문자 I. II. III.(&R)",L"Uppercase &Roman I. II. III.")
 X(S_FORMAT_SPACING,     L"줄 간격(&N)",                     L"Li&ne Spacing")
 X(S_FORMAT_SPACE_AFTER, L"단락 뒤에 10pt 공백 추가(&A)",    L"&Add 10pt space after paragraphs")
-X(S_FORMAT_INDENT_INC,  L"들여쓰기(&I)",                    L"&Increase Indent")
+X(S_FORMAT_INDENT_INC,  L"들여쓰기(&E)",                    L"Incr&ease Indent")
 X(S_FORMAT_INDENT_DEC,  L"내어쓰기(&D)",                    L"&Decrease Indent")
 X(S_FORMAT_PARAGRAPH,   L"단락(&P)...",                     L"&Paragraph...")
 X(S_FORMAT_TABS,        L"탭(&T)...",                       L"&Tabs...")

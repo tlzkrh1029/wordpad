@@ -524,6 +524,72 @@ void Dlg_CloseFind()
     }
 }
 
+namespace {
+
+RECT WorkAreaOf(HWND hwnd)
+{
+    MONITORINFO mi = { sizeof(mi) };
+    GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &mi);
+    return mi.rcWork;
+}
+
+// The dialog starts in the top right corner of the text area, where it hides the least text.
+void PlaceFindDialog()
+{
+    if (!g.hFindDlg) return;
+    RECT edit, dlg;
+    GetWindowRect(g.hEdit, &edit);
+    GetWindowRect(g.hFindDlg, &dlg);
+    RECT work = WorkAreaOf(g.hMain);
+    int w = dlg.right - dlg.left, h = dlg.bottom - dlg.top;
+    int margin = Scale(12, DpiOf(g.hMain));
+    int x = edit.right - w - margin - GetSystemMetrics(SM_CXVSCROLL);
+    int y = edit.top + margin;
+    x = std::max((int)work.left, std::min(x, (int)work.right - w));
+    y = std::max((int)work.top, std::min(y, (int)work.bottom - h));
+    SetWindowPos(g.hFindDlg, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+// Moves the dialog out of the way when it covers the text that was just found.
+void AvoidSelection()
+{
+    if (!g.hFindDlg || !IsWindowVisible(g.hFindDlg)) return;
+    CHARRANGE cr; Editor_GetSel(cr);
+    if (cr.cpMax <= cr.cpMin) return;
+    POINTL a = {}, b = {};
+    SendMessageW(g.hEdit, EM_POSFROMCHAR, (WPARAM)&a, cr.cpMin);
+    SendMessageW(g.hEdit, EM_POSFROMCHAR, (WPARAM)&b, cr.cpMax);
+    // Height of the last selected line: the distance to the line below it, or an estimate.
+    int lineHeight = MulDiv(Scale(28, DpiOf(g.hEdit)), Editor_GetZoom(), 100);
+    LONG line = (LONG)SendMessageW(g.hEdit, EM_EXLINEFROMCHAR, 0, cr.cpMax);
+    LONG nextStart = (LONG)SendMessageW(g.hEdit, EM_LINEINDEX, (WPARAM)(line + 1), 0);
+    if (nextStart > 0) {
+        POINTL n = {};
+        SendMessageW(g.hEdit, EM_POSFROMCHAR, (WPARAM)&n, nextStart);
+        if (n.y > b.y) lineHeight = n.y - b.y;
+    }
+    RECT client;
+    GetClientRect(g.hEdit, &client);
+    RECT sel = { a.x, a.y, b.x, b.y + lineHeight };
+    if (b.y != a.y) { sel.left = client.left; sel.right = client.right; }
+    if (sel.bottom <= client.top || sel.top >= client.bottom) return;      // scrolled out of view
+    MapWindowPoints(g.hEdit, nullptr, (POINT*)&sel, 2);
+    int margin = Scale(16, DpiOf(g.hFindDlg));
+    InflateRect(&sel, margin, margin);
+    RECT dlg, overlap;
+    GetWindowRect(g.hFindDlg, &dlg);
+    if (!IntersectRect(&overlap, &dlg, &sel)) return;
+    RECT work = WorkAreaOf(g.hFindDlg);
+    int h = dlg.bottom - dlg.top;
+    int y;
+    if (sel.bottom + h <= work.bottom) y = sel.bottom;           // below the match
+    else if (sel.top - h >= work.top) y = sel.top - h;           // above it
+    else return;
+    SetWindowPos(g.hFindDlg, nullptr, dlg.left, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+}
+
 void Dlg_ShowFind(bool replace)
 {
     Dlg_FindMessageId();
@@ -548,6 +614,8 @@ void Dlg_ShowFind(bool replace)
     g_fr.Flags = (g_lastFlags & (FR_MATCHCASE | FR_WHOLEWORD)) | FR_DOWN;
     g_isReplace = replace;
     g.hFindDlg = replace ? ReplaceTextW(&g_fr) : FindTextW(&g_fr);
+    PlaceFindDialog();
+    AvoidSelection();
 }
 
 void Dlg_FindNext(bool reverse)
@@ -561,6 +629,8 @@ void Dlg_FindNext(bool reverse)
     if (reverse) down = !down;
     if (!Editor_Find(g_lastFind, (g_lastFlags & FR_MATCHCASE) != 0, (g_lastFlags & FR_WHOLEWORD) != 0, down, true))
         NotFound(g_lastFind);
+    else
+        AvoidSelection();
 }
 
 bool Dlg_HandleFindMessage(UINT msg, LPARAM lParam)
@@ -581,9 +651,11 @@ bool Dlg_HandleFindMessage(UINT msg, LPARAM lParam)
 
     if (fr->Flags & FR_FINDNEXT) {
         if (!Editor_Find(what, matchCase, wholeWord, down, true)) NotFound(what);
+        else AvoidSelection();
     } else if (fr->Flags & FR_REPLACE) {
         Editor_ReplaceCurrent(what, with, matchCase, wholeWord);
         if (!Editor_Find(what, matchCase, wholeWord, true, true)) NotFound(what);
+        else AvoidSelection();
     } else if (fr->Flags & FR_REPLACEALL) {
         int n = Editor_ReplaceAll(what, with, matchCase, wholeWord);
         if (n == 0) NotFound(what);

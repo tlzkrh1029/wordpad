@@ -809,35 +809,41 @@ void TestUserInterface()
 
     // A representative document for the screenshots.
     NewDoc();
-    Type(L"RichPad\r");
-    Type(L"Windows 11\xC744 \xC704\xD55C \xC11C\xC2DD \xC788\xB294 \xD14D\xC2A4\xD2B8 \xD3B8\xC9D1\xAE30\r");
-    Type(L"Bold, italic, underline, colour and highlight are applied below.\r");
-    Type(L"First list item\rSecond list item\rThird list item\r");
-    Type(L"Centred paragraph with a picture: ");
+    const std::wstring title = L"RichPad";
+    const std::wstring subtitle = L"Windows 11을 위한 서식 있는 텍스트 편집기";
+    const std::wstring body = L"굵게, 기울임꼴, 밑줄, 글자 색, 강조 색으로 글자를 꾸밀 수 있습니다.";
+    const std::wstring items[] = { L"RTF, DOCX, ODT, TXT 문서 열기와 저장", L"그림, 날짜 및 시간, 개체 삽입", L"인쇄와 인쇄 미리 보기" };
+    Type((title + L"\r" + subtitle + L"\r" + body + L"\r").c_str());
+    for (const std::wstring& item : items) Type((item + L"\r").c_str());
+    Type(L"가운데로 맞춘 단락과 그림: ");
     LONG picturePos = Editor_GetTextLength();
     std::vector<BYTE> png = MakeTestPng(120, 60);
     Editor_InsertPictureData(png.data(), png.size());
-    Editor_SetSel(0, 7);
+    Editor_SetSel(0, (LONG)title.size());
     Editor_SetFontSize(28 * 20);
     App_OnCommand(ID_FORMAT_BOLD);
     Editor_SetTextColor(RGB(37, 99, 235), false);
-    LONG l3 = 8 + (LONG)wcslen(L"Windows 11\xC744 \xC704\xD55C \xC11C\xC2DD \xC788\xB294 \xD14D\xC2A4\xD2B8 \xD3B8\xC9D1\xAE30") + 1;
-    Editor_SetSel(l3, l3 + 4);
+    LONG l3 = (LONG)(title.size() + 1 + subtitle.size() + 1);
+    auto mark = [&](const wchar_t* word) {
+        LONG at = l3 + (LONG)body.find(word);
+        Editor_SetSel(at, at + (LONG)wcslen(word));
+    };
+    mark(L"굵게");
     App_OnCommand(ID_FORMAT_BOLD);
-    Editor_SetSel(l3 + 6, l3 + 12);
+    mark(L"기울임꼴");
     App_OnCommand(ID_FORMAT_ITALIC);
-    Editor_SetSel(l3 + 14, l3 + 23);
+    mark(L"밑줄");
     App_OnCommand(ID_FORMAT_UNDERLINE);
-    Editor_SetSel(l3 + 25, l3 + 31);
+    mark(L"글자 색");
     Editor_SetTextColor(RGB(220, 38, 38), false);
-    Editor_SetSel(l3 + 36, l3 + 45);
+    mark(L"강조 색");
     Editor_SetHighlight(RGB(255, 255, 0), false);
-    LONG l4 = l3 + (LONG)wcslen(L"Bold, italic, underline, colour and highlight are applied below.") + 1;
-    Editor_SetSel(l4, l4 + 40);
+    LONG l4 = l3 + (LONG)body.size() + 1;
+    Editor_SetSel(l4, l4 + (LONG)(items[0].size() + 1 + items[1].size() + 1 + items[2].size()));
     App_OnCommand(ID_FORMAT_LIST_BULLET);
     Editor_SetSel(picturePos, picturePos);
     App_OnCommand(ID_FORMAT_ALIGN_CENTER);
-    Editor_SetSel(l3 + 2, l3 + 2);
+    Editor_SetSel(l3 + 1, l3 + 1);
     Editor_SetModified(false);
     Pump(400);
 

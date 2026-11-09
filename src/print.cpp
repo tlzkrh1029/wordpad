@@ -379,11 +379,16 @@ void ComputePageRects(RECT rects[2], int* count)
 {
     RECT rc;
     GetClientRect(pv.hCanvas, &rc);
+    // The page size is derived from the full canvas (without scroll bars); otherwise showing a
+    // scroll bar would shrink the page, which hides the scroll bar again, and so on.
+    RECT full;
+    GetWindowRect(pv.hCanvas, &full);
+    int fullW = full.right - full.left, fullH = full.bottom - full.top;
     int pad = PvSc(20), gap = PvSc(20);
     int shown = (pv.twoPages && PageCount() > 1) ? 2 : 1;
     double aspect = (double)pv.target.paper.cy / std::max<LONG>(1, pv.target.paper.cx);
-    int availW = std::max(50, (int)rc.right - 2 * pad - (shown - 1) * gap) / shown;
-    int availH = std::max(50, (int)rc.bottom - 2 * pad);
+    int availW = std::max(50, fullW - 2 * pad - (shown - 1) * gap) / shown;
+    int availH = std::max(50, fullH - 2 * pad);
     int w = availW, h = (int)(w * aspect);
     if (h > availH) { h = availH; w = (int)(h / aspect); }
     double z = kZoomLevels[pv.zoom];
@@ -399,6 +404,9 @@ void ComputePageRects(RECT rects[2], int* count)
 
 void UpdateScrollBars()
 {
+    static bool busy = false;      // SetScrollInfo resizes the client area, which calls back here
+    if (busy) return;
+    busy = true;
     RECT rects[2];
     int count;
     RECT rc;
@@ -422,6 +430,7 @@ void UpdateScrollBars()
         GetClientRect(pv.hCanvas, &after);
         if (EqualRect(&rc, &after)) break;
     }
+    busy = false;
     InvalidateRect(pv.hCanvas, nullptr, FALSE);
 }
 
@@ -895,53 +904,94 @@ bool Print_Probe(PrintProbe& out)
     return true;
 }
 
+// Creates the preview window for the current document. The caller owns the ZoomGuard.
+static HWND OpenPreview(HWND owner)
+{
+    pv = Preview();
+    if (!OpenLayoutTarget(pv.target)) return nullptr;
+    HCURSOR oldCursor = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+    Paginate(pv.target, 0, -1, pv.starts);
+    pv.pages.assign(pv.starts.size(), PageImage());
+    pv.rendered.assign(pv.starts.size(), false);
+    SetCursor(oldCursor);
+
+    RECT rc;
+    GetWindowRect(owner, &rc);
+    std::wstring title = DocDisplayName() + L" - " + S(S_PREVIEW_TITLE);
+    HWND hwnd = CreateWindowExW(0, kPreviewClass, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                                rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, owner, nullptr, g.hInst, nullptr);
+    if (!hwnd) {
+        CloseTarget(pv.target);
+        pv = Preview();
+        return nullptr;
+    }
+    g.hPreview = hwnd;
+    return hwnd;
+}
+
+static void ClosePreview()
+{
+    if (g.hPreview) DestroyWindow(g.hPreview);
+    g.hPreview = nullptr;
+    for (PageImage& img : pv.pages) FreePage(img);
+    CloseTarget(pv.target);
+    pv = Preview();
+}
+
 void Print_Preview(HWND owner)
 {
     if (g.hPreview) return;
-    pv = Preview();
-    if (!OpenLayoutTarget(pv.target)) return;
-
     bool wantPrint = false;
     {
         ZoomGuard zoomGuard;
-        HCURSOR oldCursor = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-        Paginate(pv.target, 0, -1, pv.starts);
-        pv.pages.assign(pv.starts.size(), PageImage());
-        pv.rendered.assign(pv.starts.size(), false);
-        SetCursor(oldCursor);
-
-        RECT rc;
-        GetWindowRect(owner, &rc);
+        HWND hwnd = OpenPreview(owner);
+        if (!hwnd) return;
         bool maximized = IsZoomed(owner) != 0;
-        std::wstring title = DocDisplayName() + L" - " + S(S_PREVIEW_TITLE);
-        HWND hwnd = CreateWindowExW(0, kPreviewClass, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                                    rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, owner, nullptr, g.hInst, nullptr);
-        if (hwnd) {
-            g.hPreview = hwnd;
-            EnableWindow(owner, FALSE);
-            ShowWindow(hwnd, maximized ? SW_SHOWMAXIMIZED : SW_SHOW);
-            LayoutPreview();
-            GoToPage(0);
-            SetFocus(pv.hCanvas);
+        EnableWindow(owner, FALSE);
+        ShowWindow(hwnd, maximized ? SW_SHOWMAXIMIZED : SW_SHOW);
+        LayoutPreview();
+        GoToPage(0);
+        SetFocus(pv.hCanvas);
 
-            MSG msg;
-            while (!pv.done) {
-                BOOL r = GetMessageW(&msg, nullptr, 0, 0);
-                if (r <= 0) { if (r == 0) PostQuitMessage((int)msg.wParam); break; }
-                if (PreviewKey(msg)) continue;
-                if (IsDialogMessageW(hwnd, &msg)) continue;
-                TranslateMessage(&msg);
-                DispatchMessageW(&msg);
-            }
-            EnableWindow(owner, TRUE);
-            SetForegroundWindow(owner);
-            DestroyWindow(hwnd);
-            g.hPreview = nullptr;
+        MSG msg;
+        while (!pv.done) {
+            BOOL r = GetMessageW(&msg, nullptr, 0, 0);
+            if (r <= 0) { if (r == 0) PostQuitMessage((int)msg.wParam); break; }
+            if (PreviewKey(msg)) continue;
+            if (IsDialogMessageW(hwnd, &msg)) continue;
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
         }
-        for (PageImage& img : pv.pages) FreePage(img);
         wantPrint = pv.wantPrint;
-        CloseTarget(pv.target);
-        pv = Preview();
+        // Re-enable the owner before the preview goes away so activation returns to it.
+        EnableWindow(owner, TRUE);
+        SetForegroundWindow(owner);
+        ClosePreview();
     }
     if (wantPrint) Print_Print(owner, true);
+}
+
+int Print_PreviewSelfTest(void (*visit)(HWND preview, const wchar_t* name))
+{
+    if (g.hPreview) return 0;
+    ZoomGuard zoomGuard;
+    HWND hwnd = OpenPreview(g.hMain);
+    if (!hwnd) return 0;
+    int pages = PageCount();
+    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    LayoutPreview();
+    GoToPage(0);
+    UpdateWindow(hwnd);
+    if (visit) visit(hwnd, L"one-page");
+    pv.twoPages = true;
+    GoToPage(2);
+    UpdateWindow(hwnd);
+    if (visit) visit(hwnd, L"two-pages");
+    pv.twoPages = false;
+    GoToPage(1);
+    SetPreviewZoom(2);
+    UpdateWindow(hwnd);
+    if (visit) visit(hwnd, L"zoomed");
+    ClosePreview();
+    return pages;
 }

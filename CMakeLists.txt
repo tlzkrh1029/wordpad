@@ -41,7 +41,7 @@ target_compile_definitions(RichPad PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_
   _WIN32_WINNT=0x0A00 WINVER=0x0A00 NTDDI_VERSION=0x0A000007 _CRT_SECURE_NO_WARNINGS)
 target_link_libraries(RichPad PRIVATE
   comctl32 comdlg32 shell32 shlwapi ole32 oleaut32 oledlg uuid gdi32 user32 advapi32
-  gdiplus dwmapi uxtheme winspool)
+  gdiplus dwmapi uxtheme winspool imm32)
 
 if(MSVC)
   target_compile_options(RichPad PRIVATE /utf-8 /W3 /EHsc /permissive- /MP)

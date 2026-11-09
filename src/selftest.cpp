@@ -203,6 +203,8 @@ std::wstring Normalize(std::wstring t)
 
 // ---------------------------------------------------------------------------
 
+void PreviewVisitor(HWND preview, const wchar_t* name);
+
 void TestEnvironment()
 {
     Section("Environment");
@@ -689,6 +691,9 @@ void TestPrinting()
     bool png = Print_RenderPagePng(0, 700, PathIn(L"selftest-print-page1.png").c_str());
     Check(png, "print preview page saved as PNG");
 
+    int previewPages = Print_PreviewSelfTest(PreviewVisitor);
+    Check(previewPages == probe.pages || g_wine, "print preview window opens", "%d pages", previewPages);
+
     // Zoom must not change the printed layout.
     Editor_SetZoom(250);
     int zoomedPages = Print_CountPages();
@@ -907,6 +912,64 @@ void TestConverters()
     }
 }
 
+void TypeChars(const wchar_t* text)
+{
+    // Goes through the same path as keyboard input (font binding included).
+    for (const wchar_t* p = text; *p; ++p) SendMessageW(g.hEdit, WM_CHAR, *p, 1);
+}
+
+void TestTyping()
+{
+    Section("Typing and font binding");
+    NewDoc();
+    TypeChars(L"ab \xD55C\xAE00 cd");
+    std::wstring text = Editor_GetText(false);
+    Check(Normalize(text) == L"ab \xD55C\xAE00 cd", "typed characters arrive in order", "%s", U8(Normalize(text)).c_str());
+    CHARFORMAT2W latin = CharFormatAt(0, 2), hangul = CharFormatAt(3, 5), after = CharFormatAt(6, 8);
+    Line("Latin base: \"%s\" %ld | Hangul: \"%s\" %ld | Latin after Hangul: \"%s\" %ld", U8(latin.szFaceName).c_str(), latin.yHeight,
+         U8(hangul.szFaceName).c_str(), hangul.yHeight, U8(after.szFaceName).c_str(), after.yHeight);
+    Check(latin.yHeight == 220 && hangul.yHeight == 220 && after.yHeight == 220, "font size stays the same across scripts");
+    CheckWin(lstrcmpiW(latin.szFaceName, after.szFaceName) == 0, "Latin text returns to the Latin font after Korean text");
+
+    // With a Korean base font everything stays in that font.
+    if (lstrcmpiW(Editor_DefaultFontFace(false).c_str(), L"Calibri") == 0 || true) {
+        NewDoc();
+        Editor_SetFontFace(L"Malgun Gothic");
+        CHARFORMAT2W base = CharFormatAt(0, 0);
+        TypeChars(L"\xD55C\xAE00 ab \xD14C\xC2A4\xD2B8");
+        CHARFORMAT2W k1 = CharFormatAt(0, 2), l1 = CharFormatAt(3, 5), k2 = CharFormatAt(6, 9);
+        Line("Korean base \"%s\": Hangul \"%s\" | Latin \"%s\" | Hangul \"%s\"", U8(base.szFaceName).c_str(), U8(k1.szFaceName).c_str(),
+             U8(l1.szFaceName).c_str(), U8(k2.szFaceName).c_str());
+        CheckWin(lstrcmpiW(k1.szFaceName, l1.szFaceName) == 0 && lstrcmpiW(k1.szFaceName, k2.szFaceName) == 0,
+                 "a Korean base font is used for Latin text as well");
+    }
+
+    // Keyboard shortcuts handled by the accelerator table reach the commands.
+    NewDoc();
+    TypeChars(L"shortcut");
+    Editor_SetSel(0, 8);
+    MSG key = {};
+    key.hwnd = g.hEdit;
+    key.message = WM_KEYDOWN;
+    key.wParam = 'B';
+    BYTE state[256] = {};
+    GetKeyboardState(state);
+    BYTE saved = state[VK_CONTROL];
+    state[VK_CONTROL] = 0x80;
+    SetKeyboardState(state);
+    bool translated = g.hAccel && TranslateAcceleratorW(g.hMain, g.hAccel, &key) != 0;
+    state[VK_CONTROL] = saved;
+    SetKeyboardState(state);
+    Pump();
+    Check(translated && Has(CharFormatAt(0, 8), CFM_BOLD, CFE_BOLD), "Ctrl+B through the accelerator table");
+}
+
+void PreviewVisitor(HWND preview, const wchar_t* name)
+{
+    Pump(150);
+    SaveWindowPng(preview, (std::wstring(L"selftest-preview-") + name + L".png").c_str());
+}
+
 void TestHyperlinks()
 {
     Section("Hyperlinks");
@@ -968,8 +1031,8 @@ int SelfTest_Run(const wchar_t* logPath)
 
     typedef void (*TestFn)();
     const TestFn tests[] = { TestEnvironment, TestCharacterFormatting, TestParagraphFormatting, TestRoundTrips, TestFindReplace,
-                             TestUndo, TestGeometry, TestPictures, TestClipboard, TestConverters, TestHyperlinks, TestPrinting,
-                             TestUserInterface };
+                             TestUndo, TestTyping, TestGeometry, TestPictures, TestClipboard, TestConverters, TestHyperlinks,
+                             TestPrinting, TestUserInterface };
     for (TestFn fn : tests) {
         fn();
         // Keep a partial report on disk in case a later test crashes.

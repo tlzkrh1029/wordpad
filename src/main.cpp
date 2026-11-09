@@ -702,7 +702,8 @@ bool HandleMenuKeys(const MSG& msg)
     switch (msg.message) {
     case WM_SYSKEYDOWN:
         if (msg.wParam == VK_MENU) {
-            if (!(msg.lParam & (1 << 30))) g_altAlone = true;   // first press, not auto-repeat
+            // First press (not auto-repeat). AltGr arrives as Ctrl+Alt and must not open the menus.
+            if (!(msg.lParam & (1 << 30))) g_altAlone = GetKeyState(VK_CONTROL) >= 0;
             return false;
         }
         g_altAlone = false;

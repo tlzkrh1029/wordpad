@@ -3,6 +3,7 @@
 #include "theme.h"
 #include "icons.h"
 #include "editor.h"
+#include <imm.h>
 #include <set>
 
 namespace {
@@ -815,6 +816,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_CREATE:
         s.hwnd = hwnd;
         s.dpi = DpiOf(hwnd);
+        // Menu mnemonics are plain letters; no input method composition while the menu row has focus.
+        ImmAssociateContext(hwnd, nullptr);
         BuildItems();
         CreateChildren();
         ApplyChildTheme();

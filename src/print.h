@@ -25,3 +25,7 @@ struct PrintProbe {
     long inkBitmap = 0;     // ... and when rendered directly into a bitmap
 };
 bool Print_Probe(PrintProbe& out);
+
+// Self test: opens the preview window for the current document, calls visit() in a few states
+// (one page, two pages, zoomed) and closes it again. Returns the number of pages.
+int Print_PreviewSelfTest(void (*visit)(HWND preview, const wchar_t* name));

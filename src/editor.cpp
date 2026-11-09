@@ -25,6 +25,15 @@
 #ifndef PFN_ARABIC
 #define PFN_ARABIC 2
 #endif
+#ifndef IMF_AUTOKEYBOARD
+#define IMF_AUTOKEYBOARD 0x0001
+#endif
+#ifndef IMF_AUTOFONT
+#define IMF_AUTOFONT 0x0002
+#endif
+#ifndef IMF_AUTOFONTSIZEADJUST
+#define IMF_AUTOFONTSIZEADJUST 0x0010
+#endif
 
 namespace {
 
@@ -356,6 +365,12 @@ bool Editor_Create(HWND parent)
     SendMessageW(g.hEdit, EM_AUTOURLDETECT, AURL_ENABLEURL, 0);
     // Advanced typography is required for justified paragraphs.
     SendMessageW(g.hEdit, EM_SETTYPOGRAPHYOPTIONS, TO_ADVANCEDTYPOGRAPHY, TO_ADVANCEDTYPOGRAPHY);
+    // Keep automatic font binding (Korean text typed in a Latin font gets a Korean font), but do not
+    // let the control switch keyboard layouts or silently change font sizes per script.
+    LRESULT lang = SendMessageW(g.hEdit, EM_GETLANGOPTIONS, 0, 0);
+    lang &= ~(LRESULT)(IMF_AUTOKEYBOARD | IMF_AUTOFONTSIZEADJUST);
+    lang |= IMF_AUTOFONT;
+    SendMessageW(g.hEdit, EM_SETLANGOPTIONS, 0, lang);
 
     g_callback = new OleCallback();
     SendMessageW(g.hEdit, EM_SETOLECALLBACK, 0, (LPARAM)static_cast<IRichEditOleCallback*>(g_callback));

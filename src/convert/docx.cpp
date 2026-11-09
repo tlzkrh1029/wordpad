@@ -698,8 +698,8 @@ private:
             relId = blip->AttrOr("r:embed");
             if (relId.empty()) relId = blip->AttrOr("r:link");
             if (const XmlNode* extent = FindDescendant(node, "wp:extent")) {
-                widthTwips = (int)(strtod(extent->AttrOr("cx", "0").c_str(), nullptr) / 635.0 + 0.5);
-                heightTwips = (int)(strtod(extent->AttrOr("cy", "0").c_str(), nullptr) / 635.0 + 0.5);
+                widthTwips = RoundToInt(strtod(extent->AttrOr("cx", "0").c_str(), nullptr) / 635.0);
+                heightTwips = RoundToInt(strtod(extent->AttrOr("cy", "0").c_str(), nullptr) / 635.0);
             }
         } else if (const XmlNode* image = FindDescendant(node, "v:imagedata")) {
             relId = image->AttrOr("r:id");
@@ -1187,7 +1187,9 @@ bool DocxRead(const Bytes& file, Document& doc, std::string* error)
 {
     doc = Document();
     DocxReader reader(file, doc);
-    return reader.Read(error);
+    if (!reader.Read(error)) return false;
+    Sanitize(doc);
+    return true;
 }
 
 bool DocxWrite(const Document& doc, Bytes& file, std::string* error)

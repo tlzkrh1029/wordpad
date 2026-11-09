@@ -965,7 +965,9 @@ bool OdtRead(const Bytes& file, Document& doc, std::string* error)
 {
     doc = Document();
     OdtReader reader(file, doc);
-    return reader.Read(error);
+    if (!reader.Read(error)) return false;
+    Sanitize(doc);
+    return true;
 }
 
 bool OdtWrite(const Document& doc, Bytes& file, std::string* error)

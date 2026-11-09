@@ -170,6 +170,8 @@ std::string XmlNode::InnerText() const
     return out;
 }
 
+const size_t kMaxDepth = 256;
+
 bool XmlParse(const std::string& xml, XmlNode& root, std::string* error)
 {
     auto fail = [&](const char* message) {
@@ -286,7 +288,11 @@ bool XmlParse(const std::string& xml, XmlNode& root, std::string* error)
             placed = &stack.back()->children.back();
         }
         if (selfClosing) scopes.pop_back();
-        else stack.push_back(placed);
+        else {
+            // The readers walk the tree recursively, so the depth is bounded (real documents stay below 50).
+            if (stack.size() >= kMaxDepth) return fail("the document is nested too deeply");
+            stack.push_back(placed);
+        }
         i = j;
     }
     if (!haveRoot) return fail("no root element");

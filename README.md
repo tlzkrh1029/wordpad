@@ -109,10 +109,12 @@ cmake --build build-mingw --parallel
 
 ## 시험
 
-시험은 두 가지로 구성되어 있으며, GitHub Actions(`.github/workflows/build.yml`)가 푸시할 때마다 자동으로 실행합니다.
+시험은 세 가지로 구성되어 있으며, GitHub Actions(`.github/workflows/build.yml`)가 푸시할 때마다 자동으로 실행합니다.
 
 - **변환기 단위 시험**: DOCX, ODT, RTF 변환 코드는 운영 체제에 의존하지 않도록 작성했기 때문에 Linux에서도 시험할 수
   있습니다. `tests/run_convert_tests.sh`가 AddressSanitizer와 UndefinedBehaviorSanitizer를 켠 상태로 시험을 실행합니다.
+- **변환기 퍼징**: `tests/run_convert_fuzz.sh [횟수] [난수 값]`은 견본 문서를 무작위로 손상시킨 다음 변환기에 입력하여,
+  손상되었거나 악의적으로 만들어진 파일을 열 때에도 프로그램이 비정상적으로 종료되지 않는지 확인합니다.
 - **자체 시험**: `RichPad.exe /selftest 보고서.log`는 실제 주 창을 대상으로 서식 적용, 파일 형식별 저장과 열기, 찾기와
   바꾸기, 그림, 링크, 인쇄(PDF 프린터), 대화 상자, 테마와 언어 전환을 점검하고 화면을 PNG 파일로 저장합니다.
   GitHub Actions는 이 시험을 실제 Windows에서 실행하며, 보고서와 화면 캡처를 `selftest-results` 아티팩트로 보관합니다.

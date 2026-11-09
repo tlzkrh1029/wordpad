@@ -80,13 +80,15 @@ struct ParaStyle {
     }
 };
 
+// Numbers come straight from the document and may be absurd ("1e309", twenty digits): every
+// conversion saturates instead of overflowing.
 inline int ToInt(const std::string* s, int fallback)
 {
     if (!s || s->empty()) return fallback;
     char* end = nullptr;
     double v = strtod(s->c_str(), &end);
     if (end == s->c_str()) return fallback;
-    return (int)(v < 0 ? v - 0.5 : v + 0.5);
+    return RoundToInt(v);
 }
 
 // "12pt", "1.5in", "2.54cm", "10mm", "96px", "2pc" -> twips. Returns fallback for other input ("50%").
@@ -105,8 +107,7 @@ inline int LengthToTwips(const std::string& text, int fallback)
     else if (unit.compare(0, 2, "pc") == 0) factor = 240.0;
     else if (unit.compare(0, 2, "pt") == 0 || unit.empty()) factor = 20.0;
     else return fallback;
-    double tw = v * factor;
-    return (int)(tw < 0 ? tw - 0.5 : tw + 0.5);
+    return RoundToInt(v * factor);
 }
 
 inline std::string DirName(const std::string& path)

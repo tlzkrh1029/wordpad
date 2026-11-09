@@ -46,12 +46,13 @@ target_link_libraries(RichPad PRIVATE
 if(MSVC)
   target_compile_options(RichPad PRIVATE /utf-8 /W3 /EHsc /permissive- /MP)
   set_property(TARGET RichPad PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-  target_link_options(RichPad PRIVATE /MANIFEST:NO /ENTRY:wWinMainCRTStartup)
+  # 4 MB of stack: the document readers and the rich edit control recurse on nested content.
+  target_link_options(RichPad PRIVATE /MANIFEST:NO /ENTRY:wWinMainCRTStartup /STACK:4194304)
 else()
   target_compile_options(RichPad PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
     -finput-charset=UTF-8 -fno-rtti -ffunction-sections -fdata-sections)
   target_link_options(RichPad PRIVATE -municode -static -static-libgcc -static-libstdc++
-    -Wl,--gc-sections $<$<CONFIG:Release>:-s>)
+    -Wl,--gc-sections -Wl,--stack,4194304 $<$<CONFIG:Release>:-s>)
   set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -c 65001")
 endif()
 

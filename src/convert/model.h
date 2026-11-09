@@ -120,6 +120,13 @@ bool DocxWrite(const Document& doc, Bytes& file, std::string* error);
 bool OdtRead(const Bytes& file, Document& doc, std::string* error);
 bool OdtWrite(const Document& doc, Bytes& file, std::string* error);
 
+// Brings every number of a freshly read document into the range that the writers and the rich edit
+// control can handle (damaged or hostile files contain arbitrary values). Called by all readers.
+void Sanitize(Document& doc);
+// Rounds to the nearest integer; NaN becomes 0 and values beyond +-1e9 saturate.
+int RoundToInt(double value);
+const int kMaxTwips = 31680;       // 22 inches: the largest measure Word and the rich edit control accept
+
 // Helpers shared by the readers and writers.
 bool IsEastAsian(uint32_t codePoint);
 // Splits text runs so that East Asian characters use eastAsiaFont and other text keeps its font.

@@ -44,6 +44,9 @@ unsigned CharsetToCodePage(int charset)
 
 enum Dest { D_BODY, D_SKIP, D_FONTTBL, D_COLORTBL, D_PICT, D_PN, D_FLDINST };
 
+// Groups nest a dozen levels deep in real documents; every level costs a copy of the formatting state.
+const size_t kMaxGroupDepth = 2000;
+
 struct State {
     Dest dest = D_BODY;
     CharProps cp;
@@ -75,6 +78,7 @@ public:
             if (c == '{') {
                 FlushBytes();
                 m_skip = 0;
+                if (m_stack.size() >= kMaxGroupDepth) return false;     // not a sane document
                 m_stack.push_back(m_st);
                 m_st.star = false;
                 m_st.pictRoot = m_st.fieldRoot = m_st.fldInstRoot = false;
@@ -306,10 +310,14 @@ private:
         }
         if (data.empty() || p.type == 0) return;
 
-        int widthTwips = p.wgoal > 0 ? p.wgoal : p.w * 15;
-        int heightTwips = p.hgoal > 0 ? p.hgoal : p.h * 15;
-        widthTwips = (int)((long long)widthTwips * std::max(1, p.scalex) / 100);
-        heightTwips = (int)((long long)heightTwips * std::max(1, p.scaley) / 100);
+        // The numbers come from the file: compute in 64 bits and keep the result within the page limits.
+        auto scaled = [](int goal, int pixels, int percent) {
+            long long twips = goal > 0 ? goal : (long long)pixels * 15;
+            twips = twips * std::max(1, percent) / 100;
+            return (int)std::max(0LL, std::min<long long>(twips, kMaxTwips));
+        };
+        int widthTwips = scaled(p.wgoal, p.w, p.scalex);
+        int heightTwips = scaled(p.hgoal, p.h, p.scaley);
         if (widthTwips <= 0 || heightTwips <= 0) { widthTwips = 1440; heightTwips = 1440; }
         // Raster size used when a metafile has to be converted (twice the screen resolution).
         int pxW = std::min(4096, std::max(16, widthTwips * 192 / 1440));
@@ -380,6 +388,8 @@ private:
                 if (m_src[m_pos] == '-') ++m_pos;
                 while (m_pos < n && m_src[m_pos] >= '0' && m_src[m_pos] <= '9') ++m_pos;
                 param = strtol(m_src.substr(ps, m_pos - ps).c_str(), nullptr, 10);
+                // Keep later arithmetic (pixels to twips and the like) inside the range of an int.
+                param = std::max(-100000000L, std::min(100000000L, param));
                 hasParam = true;
             }
             if (m_pos < n && m_src[m_pos] == ' ') ++m_pos;
@@ -408,10 +418,15 @@ private:
 
     void Word(const std::string& w, bool hasParam, int v)
     {
+        // Binary data may contain braces and backslashes: outside of pictures it is skipped as a whole.
+        if (w == "bin" && m_st.dest != D_PICT) {
+            if (hasParam && v > 0) m_pos += std::min((size_t)v, m_src.size() - m_pos);
+            return;
+        }
         // "\u" is the only control word that takes part in the \ucN skipping.
         if (w == "u") {
             if (m_st.dest == D_SKIP || m_st.dest == D_PICT || m_st.dest == D_COLORTBL) { m_skip = m_st.uc; return; }
-            uint32_t cp = (uint32_t)(v < 0 ? v + 65536 : v);
+            uint32_t cp = (uint32_t)(v < 0 ? v + 65536 : v) & 0x1FFFFF;
             if (cp >= 0xD800 && cp <= 0xDBFF) {
                 m_highSurrogate = cp;
             } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
@@ -643,6 +658,7 @@ bool RtfRead(const std::string& rtf, Document& doc, std::string* error)
         if (error) *error = "not an RTF document";
         return false;
     }
+    Sanitize(doc);
     return true;
 }
 

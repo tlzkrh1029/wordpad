@@ -764,6 +764,79 @@ static void TestForeignOdt()
           doc.blocks[6].rows[0].cells[0].width == 2880);
 }
 
+// Damaged or hostile files must be rejected or tamed, never crash or overflow.
+static void TestHostileInput()
+{
+    // Absurd numbers in RTF: saturated while parsing, clamped in the model.
+    Document doc;
+    std::string error;
+    CHECK(RtfRead("{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\pard\\li99999999999999999999\\fi-99999999999\\sb2147483647"
+                  "\\sl999999999\\slmult1\\tx4000000000\\fs99999999 Text\\par}", doc, &error));
+    CHECK_EQ(doc.blocks.size(), (size_t)1);
+    if (!doc.blocks.empty()) {
+        const ParaProps& pp = doc.blocks[0].para.props;
+        CHECK(pp.left <= kMaxTwips && pp.left >= -kMaxTwips);
+        CHECK(pp.first <= kMaxTwips && pp.first >= -kMaxTwips);
+        CHECK(pp.before >= 0 && pp.before <= kMaxTwips);
+        CHECK(pp.line >= 0 && pp.line <= kMaxTwips);
+        for (const TabStop& t : pp.tabs) CHECK(t.pos >= 0 && t.pos <= kMaxTwips);
+        if (!doc.blocks[0].para.items.empty()) CHECK(doc.blocks[0].para.items[0].props.halfPoints <= 3276);
+    }
+    // Every writer copes with the result.
+    Bytes file;
+    CHECK(DocxWrite(doc, file, &error));
+    CHECK(OdtWrite(doc, file, &error));
+    CHECK(!RtfWrite(doc).empty());
+
+    // A picture whose header claims a gigantic size.
+    Bytes png = MakePng(4, 4, 9, 9, 9);
+    png[16] = 0x7F; png[17] = 0xFF; png[18] = 0xFF; png[19] = 0xFF;     // width in the IHDR chunk
+    Document pictures;
+    int index = AddPicture(pictures, png, PictureKind::AnyImageFile, 0, 0);
+    if (index >= 0) CHECK(pictures.pictures[(size_t)index].widthPx <= 100000);
+
+    // Unbalanced and very deep nesting.
+    std::string deep = "{\\rtf1 ";
+    for (int i = 0; i < 100000; ++i) deep += "{\\b ";
+    CHECK(!RtfRead(deep, doc, &error));
+    std::string xml = "<a>";
+    for (int i = 0; i < 100000; ++i) xml += "<b>";
+    XmlNode root;
+    CHECK(!XmlParse(xml, root, &error));
+    xml = "<a>";
+    for (int i = 0; i < 100; ++i) xml += "<b>";
+    for (int i = 0; i < 100; ++i) xml += "</b>";
+    xml += "</a>";
+    CHECK(XmlParse(xml, root, &error));
+
+    // Saturating number conversion.
+    CHECK_EQ(RoundToInt(1e300), 1000000000);
+    CHECK_EQ(RoundToInt(-1e300), -1000000000);
+    CHECK_EQ(RoundToInt(2.5), 3);
+    CHECK_EQ(RoundToInt(-2.5), -3);
+    double zero = 0.0;
+    CHECK_EQ(RoundToInt(zero / zero), 0);
+
+    // A DOCX with absurd values in the main part.
+    ZipWriter zip;
+    zip.Add("[Content_Types].xml", std::string("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"));
+    zip.Add("word/document.xml", std::string(
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>"
+        "<w:p><w:pPr><w:ind w:left=\"99999999999999999999\" w:hanging=\"1e309\"/><w:spacing w:before=\"-5\" w:line=\"4294967296\"/>"
+        "<w:tabs><w:tab w:val=\"left\" w:pos=\"NaN\"/></w:tabs></w:pPr>"
+        "<w:r><w:rPr><w:sz w:val=\"2147483647\"/></w:rPr><w:t>Big</w:t></w:r></w:p></w:body></w:document>"));
+    Bytes docx = zip.Finish();
+    Document hostile;
+    CHECK(DocxRead(docx, hostile, &error));
+    if (!hostile.blocks.empty()) {
+        const ParaProps& pp = hostile.blocks[0].para.props;
+        CHECK(pp.left <= kMaxTwips && pp.left >= -kMaxTwips && pp.first <= kMaxTwips && pp.first >= -kMaxTwips);
+        CHECK(pp.before >= 0 && pp.line >= 0 && pp.line <= kMaxTwips);
+        CHECK(!RtfWrite(hostile).empty());
+        CHECK(OdtWrite(hostile, file, &error));
+    }
+}
+
 int main(int argc, char** argv)
 {
     std::string outDir = argc > 1 ? argv[1] : "";
@@ -776,6 +849,7 @@ int main(int argc, char** argv)
     TestRoundTrips(outDir);
     TestForeignDocx();
     TestForeignOdt();
+    TestHostileInput();
     printf("%d checks passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
 }

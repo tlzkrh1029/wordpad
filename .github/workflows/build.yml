@@ -76,6 +76,10 @@ jobs:
       - name: Converter unit tests (with sanitizers)
         run: tests/run_convert_tests.sh
 
+      # Damaged DOCX / ODT / RTF files must never crash the converters.
+      - name: Converter fuzzing (short run)
+        run: tests/run_convert_fuzz.sh 3000 1
+
       - name: Install MinGW-w64
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++-mingw-w64-x86-64
 

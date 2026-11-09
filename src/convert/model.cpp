@@ -192,6 +192,9 @@ int AddPicture(Document& doc, const Bytes& data, PictureKind kind, int widthPx, 
         if ((pic.widthPx <= 0 || pic.heightPx <= 0) && !ImageSize(pic.data, nullptr, &pic.widthPx, &pic.heightPx)) return -1;
     }
     if (pic.widthPx <= 0 || pic.heightPx <= 0) return -1;
+    // The header of a damaged image may claim any size.
+    pic.widthPx = std::min(pic.widthPx, 100000);
+    pic.heightPx = std::min(pic.heightPx, 100000);
     doc.pictures.push_back(std::move(pic));
     return (int)doc.pictures.size() - 1;
 }
@@ -238,6 +241,77 @@ bool RtfToOdt(const std::string& rtf, Bytes& file, std::string* error)
     Document doc;
     if (!RtfRead(rtf, doc, error)) return false;
     return OdtWrite(doc, file, error);
+}
+
+int RoundToInt(double value)
+{
+    if (!(value == value)) return 0;                // NaN
+    if (value >= 1e9) return 1000000000;
+    if (value <= -1e9) return -1000000000;
+    return (int)(value < 0 ? value - 0.5 : value + 0.5);
+}
+
+namespace {
+
+int Clamp(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+void SanitizeParagraph(Paragraph& para, const Document& doc)
+{
+    ParaProps& pp = para.props;
+    pp.align = Clamp(pp.align, 0, 3);
+    pp.left = Clamp(pp.left, -kMaxTwips, kMaxTwips);
+    pp.first = Clamp(pp.first, -kMaxTwips, kMaxTwips);
+    pp.right = Clamp(pp.right, -kMaxTwips, kMaxTwips);
+    pp.before = Clamp(pp.before, 0, kMaxTwips);
+    pp.after = Clamp(pp.after, 0, kMaxTwips);
+    pp.lineRule = Clamp(pp.lineRule, 0, 2);
+    pp.line = Clamp(pp.line, 0, kMaxTwips);
+    pp.list = Clamp(pp.list, 0, 6);
+    pp.listStart = Clamp(pp.listStart, 0, 32767);
+    if (pp.tabs.size() > 32) pp.tabs.resize(32);        // the rich edit control keeps at most 32 tab stops
+    for (TabStop& t : pp.tabs) {
+        t.pos = Clamp(t.pos, 0, kMaxTwips);
+        t.align = Clamp(t.align, 0, 3);
+    }
+    for (Inline& item : para.items) {
+        item.props.halfPoints = Clamp(item.props.halfPoints, 0, 3276);      // 1638 points
+        item.props.script = Clamp(item.props.script, 0, 2);
+        if (item.kind != Inline::Picture) continue;
+        if (item.picture < 0 || item.picture >= (int)doc.pictures.size()) {
+            item = Inline();                            // a picture that does not exist
+            continue;
+        }
+        item.widthTwips = Clamp(item.widthTwips, 0, kMaxTwips);
+        item.heightTwips = Clamp(item.heightTwips, 0, kMaxTwips);
+    }
+}
+
+}
+
+void Sanitize(Document& doc)
+{
+    doc.defaultHalfPoints = Clamp(doc.defaultHalfPoints, 0, 3276);
+    for (Picture& pic : doc.pictures) {
+        pic.widthPx = Clamp(pic.widthPx, 0, 100000);
+        pic.heightPx = Clamp(pic.heightPx, 0, 100000);
+    }
+    for (Block& block : doc.blocks) {
+        if (!block.isTable) { SanitizeParagraph(block.para, doc); continue; }
+        for (Row& row : block.rows) {
+            // Word and the rich edit control allow 63 cells in a row; the rest moves into the last one.
+            const size_t kMaxCells = 63;
+            if (row.cells.size() > kMaxCells) {
+                Cell& last = row.cells[kMaxCells - 1];
+                for (size_t i = kMaxCells; i < row.cells.size(); ++i)
+                    for (Paragraph& p : row.cells[i].paras) last.paras.push_back(std::move(p));
+                row.cells.resize(kMaxCells);
+            }
+            for (Cell& cell : row.cells) {
+                cell.width = Clamp(cell.width, 0, kMaxTwips);
+                for (Paragraph& p : cell.paras) SanitizeParagraph(p, doc);
+            }
+        }
+    }
 }
 
 } // namespace conv

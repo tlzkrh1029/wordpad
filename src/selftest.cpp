@@ -938,6 +938,33 @@ void TestConverters()
                      lengthAfter, lengthBefore, Editor_GetObjectCount());
         }
     }
+
+    // A converted document asks before it overwrites the original file - once.
+    std::wstring copy = PathIn(L"selftest-overwrite.docx");
+    CopyFileW(PathIn(L"selftest-sample.docx").c_str(), copy.c_str(), FALSE);
+    auto prompts = [] {
+        int count = 0;
+        for (size_t pos = g_out.find("note: message box suppressed"); pos != std::string::npos;
+             pos = g_out.find("note: message box suppressed", pos + 1)) ++count;
+        return count;
+    };
+    bool opened = App_OpenFile(copy);
+    Editor_SetSel(0, 0);
+    Type(L"Edited ");
+    int before = prompts();
+    bool savedOnce = App_Save(false);
+    int afterFirst = prompts();
+    Type(L"again ");
+    bool savedTwice = App_Save(false);
+    int afterSecond = prompts();
+    Check(opened && savedOnce && savedTwice && afterFirst == before + 1 && afterSecond == afterFirst,
+          "overwriting a converted document asks once", "%d then %d prompts", afterFirst - before, afterSecond - afterFirst);
+    bool reopened = App_OpenFile(copy);
+    Check(reopened && Normalize(Editor_GetText(false)).rfind(L"Edited again Heading", 0) == 0, "the converted document was saved in its own format",
+          "%s", U8(Normalize(Editor_GetText(false)).substr(0, 24)).c_str());
+    DeleteFileW(copy.c_str());
+    Mru_Remove(copy);
+    App_NewDocument();
 }
 
 void TypeChars(const wchar_t* text)

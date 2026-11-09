@@ -79,6 +79,8 @@ struct Document {
     DocFormat    format = FMT_RTF;
     bool         utf8Bom = false;   // text files: keep the byte order mark when saving
     bool         readOnly = false;
+    bool         imported = false;      // opened through the DOCX / ODT converter and not saved since
+    bool         objectsWarned = false; // the user accepted that objects are saved as pictures
 };
 
 struct App {

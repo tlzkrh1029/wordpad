@@ -197,7 +197,7 @@ X(S_MSG_SAVEFAILED,     L"파일을 저장할 수 없습니다.\n%s",  L"The fil
 X(S_MSG_UNSUPPORTED,    L"지원하지 않는 파일 형식입니다.\n%s", L"This file format is not supported.\n%s")
 X(S_MSG_OLDDOC,         L"이 파일은 이전 Word 이진 형식(.doc)이므로 열 수 없습니다. Word에서 .docx 또는 .rtf로 저장한 다음 다시 열어 주십시오.\n%s", L"This file uses the legacy Word binary format (.doc) and cannot be opened. Save it as .docx or .rtf first.\n%s")
 X(S_MSG_TEXTONLY,       L"이 문서를 일반 텍스트로 저장하면 서식, 그림, 개체가 모두 제거됩니다.\n\n계속 저장하시겠습니까?", L"Saving this document as plain text will remove all formatting, pictures and objects.\n\nDo you want to continue?")
-X(S_MSG_LOSSY,          L"이 형식으로 저장하면 일부 서식이나 개체가 유지되지 않을 수 있습니다.\n\n계속 저장하시겠습니까?", L"Some formatting or objects may not be preserved in this format.\n\nDo you want to continue?")
+X(S_MSG_LOSSY,          L"문서에 포함된 개체는 이 형식에서 그림으로 저장되므로, 저장한 파일에서는 더 이상 편집할 수 없습니다.\n\n계속 저장하시겠습니까?", L"Embedded objects are saved as pictures in this format and can no longer be edited in the saved file.\n\nDo you want to continue?")
 X(S_MSG_ANSILOSS,       L"이 문서에는 ANSI 인코딩으로 표현할 수 없는 문자가 있습니다. ANSI로 저장하면 해당 문자가 손실됩니다.\n\n계속 저장하시겠습니까?", L"This document contains characters that cannot be represented in the ANSI encoding and will be lost.\n\nDo you want to continue?")
 X(S_MSG_NOTFOUND,       L"\"%s\"을(를) 찾을 수 없습니다.",  L"Cannot find \"%s\".")
 X(S_MSG_REPLACED,       L"%d개 항목을 바꿨습니다.",         L"%d replacements were made.")
@@ -214,7 +214,7 @@ X(S_MSG_ASSOC_REGISTER, L"등록(&R)",                        L"&Register")
 X(S_MSG_ASSOC_REMOVE,   L"등록 해제(&U)",                   L"&Unregister")
 X(S_MSG_ASSOC_REMOVED,  L"파일 형식 연결을 해제했습니다.",  L"File associations were removed.")
 X(S_MSG_READONLY,       L"이 파일은 읽기 전용입니다. 다른 이름으로 저장해 주십시오.", L"This file is read-only. Save it under a different name.")
-X(S_MSG_CONVERTWARN,    L"이 문서에는 RichPad에서 표시할 수 없는 내용이 있을 수 있습니다. 원본을 보존하려면 다른 이름으로 저장하십시오.", L"This document may contain content that RichPad cannot display. Save under a different name to keep the original.")
+X(S_MSG_CONVERTWARN,    L"이 문서는 다른 형식의 문서를 변환하여 연 것입니다. RichPad가 지원하지 않는 내용(머리글과 바닥글, 각주, 도형, 변경 내용 추적 등)은 저장한 파일에 남지 않습니다.\n\n원본 파일을 덮어쓰려면 [예]를, 원본을 그대로 두고 다른 이름으로 저장하려면 [아니요]를 선택해 주십시오.", L"This document was converted when it was opened. Content that RichPad does not support (headers and footers, footnotes, shapes, tracked changes and so on) is not kept in the saved file.\n\nChoose Yes to overwrite the original file, or No to keep it and save under a different name.")
 
 // ---- Paragraph dialog ----
 X(S_DLG_PARAGRAPH,      L"단락",                            L"Paragraph")

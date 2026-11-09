@@ -25,6 +25,7 @@ const UINT_PTR kTimerCount = 1;
 const CLSID kCLSID_FileOpenDialog = { 0xDC1C5A9C, 0xE88A, 0x4DDE, { 0xA5, 0xA1, 0x60, 0xF8, 0x2A, 0x20, 0xAE, 0xF7 } };
 const CLSID kCLSID_FileSaveDialog = { 0xC0B4E2F3, 0xBA21, 0x4773, { 0x8D, 0xBA, 0x33, 0x5E, 0xC9, 0x46, 0xEB, 0x8B } };
 const IID   kIID_IFileDialog      = { 0x42F85136, 0xDB7E, 0x439C, { 0x85, 0xF1, 0xE4, 0x07, 0x5D, 0x13, 0x5F, 0xC8 } };
+const IID   kIID_IShellItem       = { 0x43826D1E, 0xE718, 0x42EE, { 0xBC, 0x55, 0xA1, 0xE2, 0x61, 0xC3, 0x7B, 0xFE } };
 
 std::wstring g_shownTitle;
 long long g_charCount = 0, g_wordCount = -1;
@@ -196,7 +197,20 @@ bool ShowFileDialog(HWND owner, bool save, const FileType* types, int typeCount,
         dlg->SetFileTypeIndex((UINT)*typeIndex);
         if (defExt) dlg->SetDefaultExtension(defExt);
         if (title) dlg->SetTitle(title);
-        if (save && !path.empty()) dlg->SetFileName(path.c_str());
+        if (save && !path.empty()) {
+            // The name box shows the file name only; the dialog opens in the folder of the document.
+            size_t slash = path.find_last_of(L"\\/");
+            dlg->SetFileName(slash == std::wstring::npos ? path.c_str() : path.c_str() + slash + 1);
+            if (slash != std::wstring::npos) {
+                std::wstring dir = path.substr(0, slash);
+                if (dir.size() == 2 && dir[1] == L':') dir += L'\\';
+                IShellItem* folder = nullptr;
+                if (SUCCEEDED(SHCreateItemFromParsingName(dir.c_str(), nullptr, kIID_IShellItem, (void**)&folder)) && folder) {
+                    dlg->SetFolder(folder);
+                    folder->Release();
+                }
+            }
+        }
         DWORD opts = 0;
         dlg->GetOptions(&opts);
         opts |= FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR;
@@ -762,6 +776,20 @@ HACCEL CreateAccelerators()
     return CreateAcceleratorTableW(table, (int)ARRAYSIZE(table));
 }
 
+// Ctrl+Alt is how AltGr arrives, and AltGr types characters on many keyboard layouts (AltGr+V is "@" on
+// a Hungarian keyboard, for example).  Such a key press is text, not the Ctrl+Alt+V accelerator.
+bool IsAltGrCharacter(const MSG& msg)
+{
+    if (msg.message != WM_KEYDOWN && msg.message != WM_SYSKEYDOWN) return false;
+    if (GetKeyState(VK_CONTROL) >= 0 || GetKeyState(VK_MENU) >= 0) return false;
+    BYTE state[256];
+    if (!GetKeyboardState(state)) return false;
+    wchar_t text[8] = L"";
+    // Flag 4: do not change the keyboard state (pending dead keys stay untouched).
+    int n = ToUnicodeEx((UINT)msg.wParam, (UINT)((msg.lParam >> 16) & 0xFF), state, text, 8, 4, GetKeyboardLayout(0));
+    return n > 0 && text[0] >= 0x20;
+}
+
 // Keyboard access to the custom menu row: Alt, F10 and Alt+letter.
 bool HandleMenuKeys(const MSG& msg)
 {
@@ -1134,9 +1162,11 @@ bool App_OpenFile(const std::wstring& pathIn)
         ShowLoadError(path, result, err);
         return false;
     }
+    g.doc = Document();
     g.doc.path = path;
     g.doc.format = format;
     g.doc.utf8Bom = bom;
+    g.doc.imported = (format == FMT_DOCX || format == FMT_ODT);
     DWORD attrs = GetFileAttributesW(path.c_str());
     g.doc.readOnly = attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY);
     Editor_SetSel(0, 0);
@@ -1170,6 +1200,18 @@ bool App_Save(bool saveAs)
         if (format != g.doc.format) bom = false;
     }
 
+    // A converted document only holds what RichPad understands: overwriting the original file
+    // silently would drop everything else.
+    if (g.doc.imported && !g.doc.path.empty() && lstrcmpiW(path.c_str(), g.doc.path.c_str()) == 0) {
+        int choice = MsgBox(g.hMain, S(S_MSG_CONVERTWARN), MB_YESNOCANCEL | MB_ICONWARNING);
+        if (choice == IDNO) return App_Save(true);
+        if (choice != IDYES) return false;
+    }
+    if ((format == FMT_DOCX || format == FMT_ODT) && !g.doc.objectsWarned && Editor_GetObjectCount() > 0) {
+        if (MsgBox(g.hMain, S(S_MSG_LOSSY), MB_YESNO | MB_ICONWARNING) != IDYES) return false;
+        g.doc.objectsWarned = true;
+    }
+
     if (IsTextFormat(format)) {
         bool wasRich = !IsTextFormat(g.doc.format) || Editor_GetObjectCount() > 0;
         if (wasRich && (saveAs || g.doc.path.empty() || !IsTextFormat(g.doc.format))) {
@@ -1194,6 +1236,7 @@ bool App_Save(bool saveAs)
     g.doc.format = format;
     g.doc.utf8Bom = bom;
     g.doc.readOnly = false;
+    g.doc.imported = false;
     Editor_SetModified(false);
     Mru_Add(path);
     App_RebuildMenus();
@@ -1499,7 +1542,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nShow)
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (g.hFindDlg && IsDialogMessageW(g.hFindDlg, &msg)) continue;
         if (HandleMenuKeys(msg)) continue;
-        if (g.hAccel && GetActiveWindow() == g.hMain && !CmdBar_IsChildFocused() &&
+        if (g.hAccel && GetActiveWindow() == g.hMain && !CmdBar_IsChildFocused() && !IsAltGrCharacter(msg) &&
             TranslateAcceleratorW(g.hMain, g.hAccel, &msg))
             continue;
         TranslateMessage(&msg);

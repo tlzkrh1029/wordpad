@@ -1,0 +1,124 @@
+// RichPad resources. All visible dialog text is replaced at run time with the
+// localised strings from src/strings.def, so this file stays pure ASCII.
+#include <windows.h>
+#include "resource.h"
+
+#ifndef IDC_STATIC
+#define IDC_STATIC (-1)
+#endif
+
+IDI_APP ICON "app.ico"
+
+1 24 "richpad.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "RichPad open-source project"
+            VALUE "FileDescription", "RichPad"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "RichPad"
+            VALUE "OriginalFilename", "RichPad.exe"
+            VALUE "ProductName", "RichPad"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+IDD_PARAGRAPH DIALOGEX 0, 0, 232, 188
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Paragraph"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Indentation", IDC_GROUP_1, 7, 7, 218, 68
+    LTEXT           "Left:", IDC_STATIC_1, 16, 23, 96, 8
+    EDITTEXT        IDC_PARA_LEFT, 118, 21, 64, 13, ES_AUTOHSCROLL
+    LTEXT           "Right:", IDC_STATIC_2, 16, 39, 96, 8
+    EDITTEXT        IDC_PARA_RIGHT, 118, 37, 64, 13, ES_AUTOHSCROLL
+    LTEXT           "First line:", IDC_STATIC_3, 16, 55, 96, 8
+    EDITTEXT        IDC_PARA_FIRST, 118, 53, 64, 13, ES_AUTOHSCROLL
+    GROUPBOX        "Spacing", IDC_GROUP_2, 7, 80, 218, 50
+    LTEXT           "Line spacing:", IDC_STATIC_4, 16, 96, 96, 8
+    COMBOBOX        IDC_PARA_SPACING, 118, 94, 64, 80, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    AUTOCHECKBOX    "Add 10pt space after paragraphs", IDC_PARA_SPACEAFTER, 16, 113, 204, 10, WS_TABSTOP
+    LTEXT           "Alignment:", IDC_STATIC_5, 16, 141, 96, 8
+    COMBOBOX        IDC_PARA_ALIGN, 118, 139, 64, 80, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 117, 167, 52, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 173, 167, 52, 14
+END
+
+IDD_TABS DIALOGEX 0, 0, 206, 156
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Tabs"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Tab stop position:", IDC_STATIC_1, 7, 7, 120, 8
+    EDITTEXT        IDC_TABS_EDIT, 7, 18, 120, 13, ES_AUTOHSCROLL
+    LISTBOX         IDC_TABS_LIST, 7, 34, 120, 94, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    PUSHBUTTON      "Set", IDC_TABS_SET, 134, 18, 65, 14
+    PUSHBUTTON      "Clear", IDC_TABS_CLEAR, 134, 36, 65, 14
+    PUSHBUTTON      "Clear All", IDC_TABS_CLEARALL, 134, 54, 65, 14
+    DEFPUSHBUTTON   "OK", IDOK, 91, 135, 52, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 147, 135, 52, 14
+END
+
+IDD_DATETIME DIALOGEX 0, 0, 214, 178
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Date and Time"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Available formats:", IDC_STATIC_1, 7, 7, 200, 8
+    LISTBOX         IDC_DATE_LIST, 7, 18, 200, 132, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER | WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 99, 157, 52, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 155, 157, 52, 14
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 260, 138
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About RichPad"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    CONTROL         "", IDC_ABOUT_ICON, "Static", SS_ICON | SS_REALSIZEIMAGE, 14, 14, 32, 32
+    LTEXT           "RichPad", IDC_ABOUT_TITLE, 60, 12, 190, 16
+    LTEXT           "Version", IDC_ABOUT_VERSION, 60, 30, 190, 8
+    LTEXT           "", IDC_ABOUT_DESC, 60, 46, 190, 28
+    LTEXT           "", IDC_ABOUT_NOTE, 60, 78, 190, 28
+    DEFPUSHBUTTON   "OK", IDOK, 198, 117, 52, 14
+END
+
+IDD_PICTURESIZE DIALOGEX 0, 0, 206, 96
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Resize Picture"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Horizontal (%):", IDC_STATIC_1, 10, 13, 100, 8
+    EDITTEXT        IDC_PIC_WIDTH, 116, 11, 50, 13, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Vertical (%):", IDC_STATIC_2, 10, 31, 100, 8
+    EDITTEXT        IDC_PIC_HEIGHT, 116, 29, 50, 13, ES_AUTOHSCROLL | ES_NUMBER
+    AUTOCHECKBOX    "Lock aspect ratio", IDC_PIC_LOCK, 10, 50, 186, 10, WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 91, 75, 52, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 147, 75, 52, 14
+END
+
+IDD_TEXTVIEW DIALOGEX 0, 0, 300, 250
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Keyboard Shortcuts"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_TEXTVIEW_EDIT, 7, 7, 286, 216, ES_MULTILINE | ES_READONLY | WS_VSCROLL | NOT WS_TABSTOP
+    DEFPUSHBUTTON   "Close", IDOK, 241, 229, 52, 14
+END

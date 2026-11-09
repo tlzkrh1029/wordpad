@@ -1,0 +1,293 @@
+// String table: X(id, korean, english)
+// This file is included several times with different definitions of X.
+
+X(S_APPNAME,            L"RichPad",                         L"RichPad")
+X(S_UNTITLED,           L"문서",                            L"Document")
+X(S_READY,              L"준비",                            L"Ready")
+
+// ---- Menu titles ----
+X(S_MENU_FILE,          L"파일(&F)",                        L"&File")
+X(S_MENU_EDIT,          L"편집(&E)",                        L"&Edit")
+X(S_MENU_VIEW,          L"보기(&V)",                        L"&View")
+X(S_MENU_INSERT,        L"삽입(&I)",                        L"&Insert")
+X(S_MENU_FORMAT,        L"서식(&O)",                        L"F&ormat")
+X(S_MENU_HELP,          L"도움말(&H)",                      L"&Help")
+
+// ---- File menu ----
+X(S_FILE_NEW,           L"새로 만들기(&N)",                 L"&New")
+X(S_FILE_NEWWINDOW,     L"새 창(&W)",                       L"New &Window")
+X(S_FILE_OPEN,          L"열기(&O)...",                     L"&Open...")
+X(S_FILE_SAVE,          L"저장(&S)",                        L"&Save")
+X(S_FILE_SAVEAS,        L"다른 이름으로 저장(&A)...",       L"Save &As...")
+X(S_FILE_PRINT,         L"인쇄(&P)...",                     L"&Print...")
+X(S_FILE_QUICKPRINT,    L"빠른 인쇄(&Q)",                   L"&Quick Print")
+X(S_FILE_PRINTPREVIEW,  L"인쇄 미리 보기(&V)",              L"Print Pre&view")
+X(S_FILE_PAGESETUP,     L"페이지 설정(&U)...",              L"Page Set&up...")
+X(S_FILE_RECENT,        L"최근 문서(&R)",                   L"&Recent Documents")
+X(S_FILE_RECENT_NONE,   L"(없음)",                          L"(None)")
+X(S_FILE_EXIT,          L"끝내기(&X)",                      L"E&xit")
+
+// ---- Edit menu ----
+X(S_EDIT_UNDO,          L"실행 취소(&U)",                   L"&Undo")
+X(S_EDIT_REDO,          L"다시 실행(&R)",                   L"&Redo")
+X(S_EDIT_CUT,           L"잘라내기(&T)",                    L"Cu&t")
+X(S_EDIT_COPY,          L"복사(&C)",                        L"&Copy")
+X(S_EDIT_PASTE,         L"붙여넣기(&P)",                    L"&Paste")
+X(S_EDIT_PASTESPECIAL,  L"선택하여 붙여넣기(&S)...",        L"Paste &Special...")
+X(S_EDIT_PASTETEXT,     L"서식 없이 붙여넣기(&M)",          L"Paste as Plain Te&xt")
+X(S_EDIT_DELETE,        L"삭제(&L)",                        L"De&lete")
+X(S_EDIT_SELECTALL,     L"모두 선택(&A)",                   L"Select &All")
+X(S_EDIT_FIND,          L"찾기(&F)...",                     L"&Find...")
+X(S_EDIT_FINDNEXT,      L"다음 찾기(&N)",                   L"Find &Next")
+X(S_EDIT_FINDPREV,      L"이전 찾기(&V)",                   L"Find Pre&vious")
+X(S_EDIT_REPLACE,       L"바꾸기(&E)...",                   L"R&eplace...")
+X(S_EDIT_PICTURESIZE,   L"그림 크기 조정(&Z)...",           L"Resi&ze Picture...")
+
+// ---- View menu ----
+X(S_VIEW_ZOOMIN,        L"확대(&I)",                        L"Zoom &In")
+X(S_VIEW_ZOOMOUT,       L"축소(&O)",                        L"Zoom &Out")
+X(S_VIEW_ZOOM100,       L"100%(&1)",                        L"&100%")
+X(S_VIEW_RULER,         L"눈금자(&R)",                      L"&Ruler")
+X(S_VIEW_STATUSBAR,     L"상태 표시줄(&S)",                 L"&Status Bar")
+X(S_VIEW_WRAP,          L"자동 줄 바꿈(&W)",                L"&Word Wrap")
+X(S_VIEW_WRAP_NONE,     L"줄 바꿈 안 함(&N)",               L"&No Wrap")
+X(S_VIEW_WRAP_WINDOW,   L"창에 맞춤(&W)",                   L"Wrap to &Window")
+X(S_VIEW_WRAP_RULER,    L"눈금자에 맞춤(&R)",               L"Wrap to &Ruler")
+X(S_VIEW_UNITS,         L"측정 단위(&U)",                   L"Measurement &Units")
+X(S_VIEW_UNIT_INCH,     L"인치(&I)",                        L"&Inches")
+X(S_VIEW_UNIT_CM,       L"센티미터(&C)",                    L"&Centimeters")
+X(S_VIEW_UNIT_PT,       L"포인트(&P)",                      L"&Points")
+X(S_VIEW_UNIT_PICA,     L"파이카(&A)",                      L"Pic&as")
+X(S_VIEW_THEME,         L"테마(&T)",                        L"&Theme")
+X(S_VIEW_THEME_SYSTEM,  L"시스템 설정 사용(&S)",            L"Use &System Setting")
+X(S_VIEW_THEME_LIGHT,   L"밝게(&L)",                        L"&Light")
+X(S_VIEW_THEME_DARK,    L"어둡게(&D)",                      L"&Dark")
+X(S_VIEW_LANG,          L"언어(&L)",                        L"&Language")
+X(S_VIEW_LANG_AUTO,     L"자동(&A)",                        L"&Automatic")
+X(S_VIEW_LANG_KO,       L"한국어(&K)",                      L"한국어 (&Korean)")
+X(S_VIEW_LANG_EN,       L"English(&E)",                     L"&English")
+
+// ---- Insert menu ----
+X(S_INSERT_PICTURE,     L"그림(&P)...",                     L"&Picture...")
+X(S_INSERT_DATETIME,    L"날짜 및 시간(&D)...",             L"&Date and Time...")
+X(S_INSERT_OBJECT,      L"개체(&O)...",                     L"&Object...")
+
+// ---- Format menu ----
+X(S_FORMAT_FONT,        L"글꼴(&F)...",                     L"&Font...")
+X(S_FORMAT_BOLD,        L"굵게(&B)",                        L"&Bold")
+X(S_FORMAT_ITALIC,      L"기울임꼴(&I)",                    L"&Italic")
+X(S_FORMAT_UNDERLINE,   L"밑줄(&U)",                        L"&Underline")
+X(S_FORMAT_STRIKE,      L"취소선(&K)",                      L"Stri&kethrough")
+X(S_FORMAT_SUBSCRIPT,   L"아래 첨자(&S)",                   L"&Subscript")
+X(S_FORMAT_SUPERSCRIPT, L"위 첨자(&R)",                     L"Supe&rscript")
+X(S_FORMAT_ALIGN,       L"맞춤(&A)",                        L"&Alignment")
+X(S_FORMAT_ALIGN_LEFT,  L"왼쪽 맞춤(&L)",                   L"Align &Left")
+X(S_FORMAT_ALIGN_CENTER,L"가운데 맞춤(&C)",                 L"&Center")
+X(S_FORMAT_ALIGN_RIGHT, L"오른쪽 맞춤(&R)",                 L"Align &Right")
+X(S_FORMAT_ALIGN_JUSTIFY,L"양쪽 맞춤(&J)",                  L"&Justify")
+X(S_FORMAT_LIST,        L"목록(&L)",                        L"&List")
+X(S_FORMAT_LIST_NONE,   L"없음(&N)",                        L"&None")
+X(S_FORMAT_LIST_BULLET, L"글머리 기호(&B)",                 L"&Bullets")
+X(S_FORMAT_LIST_NUMBER, L"번호 매기기 1. 2. 3.(&1)",        L"Numbering &1. 2. 3.")
+X(S_FORMAT_LIST_LALPHA, L"영문 소문자 a. b. c.(&A)",        L"Lowercase letters &a. b. c.")
+X(S_FORMAT_LIST_UALPHA, L"영문 대문자 A. B. C.(&U)",        L"&Uppercase letters A. B. C.")
+X(S_FORMAT_LIST_LROMAN, L"로마 숫자 소문자 i. ii. iii.(&I)",L"Lowercase Roman &i. ii. iii.")
+X(S_FORMAT_LIST_UROMAN, L"로마 숫자 대문자 I. II. III.(&R)",L"Uppercase &Roman I. II. III.")
+X(S_FORMAT_SPACING,     L"줄 간격(&N)",                     L"Li&ne Spacing")
+X(S_FORMAT_SPACE_AFTER, L"단락 뒤에 10pt 공백 추가(&A)",    L"&Add 10pt space after paragraphs")
+X(S_FORMAT_INDENT_INC,  L"들여쓰기(&I)",                    L"&Increase Indent")
+X(S_FORMAT_INDENT_DEC,  L"내어쓰기(&D)",                    L"&Decrease Indent")
+X(S_FORMAT_PARAGRAPH,   L"단락(&P)...",                     L"&Paragraph...")
+X(S_FORMAT_TABS,        L"탭(&T)...",                       L"&Tabs...")
+X(S_FORMAT_CLEAR,       L"서식 지우기(&C)",                 L"&Clear Formatting")
+
+// ---- Help menu ----
+X(S_HELP_ASSOCIATE,     L"파일 형식 연결(&F)...",           L"&File Associations...")
+X(S_HELP_SHORTCUTS,     L"바로 가기 키(&K)",                L"&Keyboard Shortcuts")
+X(S_HELP_ABOUT,         L"RichPad 정보(&A)",                L"&About RichPad")
+
+// ---- Command bar groups / labels ----
+X(S_GROUP_CLIPBOARD,    L"클립보드",                        L"Clipboard")
+X(S_GROUP_FONT,         L"글꼴",                            L"Font")
+X(S_GROUP_PARAGRAPH,    L"단락",                            L"Paragraph")
+X(S_GROUP_INSERT,       L"삽입",                            L"Insert")
+X(S_GROUP_EDITING,      L"편집",                            L"Editing")
+
+X(S_BTN_PASTE,          L"붙여넣기",                        L"Paste")
+X(S_BTN_CUT,            L"잘라내기",                        L"Cut")
+X(S_BTN_COPY,           L"복사",                            L"Copy")
+X(S_BTN_PICTURE,        L"그림",                            L"Picture")
+X(S_BTN_DATETIME,       L"날짜 및 시간",                    L"Date and time")
+X(S_BTN_OBJECT,         L"개체 삽입",                       L"Insert object")
+X(S_BTN_FIND,           L"찾기",                            L"Find")
+X(S_BTN_REPLACE,        L"바꾸기",                          L"Replace")
+X(S_BTN_SELECTALL,      L"모두 선택",                       L"Select all")
+
+// ---- Tooltips ----
+X(S_TIP_SAVE,           L"저장 (Ctrl+S)",                   L"Save (Ctrl+S)")
+X(S_TIP_UNDO,           L"실행 취소 (Ctrl+Z)",              L"Undo (Ctrl+Z)")
+X(S_TIP_REDO,           L"다시 실행 (Ctrl+Y)",              L"Redo (Ctrl+Y)")
+X(S_TIP_PASTE,          L"붙여넣기 (Ctrl+V)",               L"Paste (Ctrl+V)")
+X(S_TIP_PASTE_MORE,     L"붙여넣기 옵션",                   L"Paste options")
+X(S_TIP_CUT,            L"잘라내기 (Ctrl+X)",               L"Cut (Ctrl+X)")
+X(S_TIP_COPY,           L"복사 (Ctrl+C)",                   L"Copy (Ctrl+C)")
+X(S_TIP_FONTNAME,       L"글꼴",                            L"Font family")
+X(S_TIP_FONTSIZE,       L"글꼴 크기",                       L"Font size")
+X(S_TIP_GROW,           L"글꼴 크게 (Ctrl+Shift+>)",        L"Grow font (Ctrl+Shift+>)")
+X(S_TIP_SHRINK,         L"글꼴 작게 (Ctrl+Shift+<)",        L"Shrink font (Ctrl+Shift+<)")
+X(S_TIP_BOLD,           L"굵게 (Ctrl+B)",                   L"Bold (Ctrl+B)")
+X(S_TIP_ITALIC,         L"기울임꼴 (Ctrl+I)",               L"Italic (Ctrl+I)")
+X(S_TIP_UNDERLINE,      L"밑줄 (Ctrl+U)",                   L"Underline (Ctrl+U)")
+X(S_TIP_STRIKE,         L"취소선",                          L"Strikethrough")
+X(S_TIP_SUBSCRIPT,      L"아래 첨자 (Ctrl+=)",              L"Subscript (Ctrl+=)")
+X(S_TIP_SUPERSCRIPT,    L"위 첨자 (Ctrl+Shift+=)",          L"Superscript (Ctrl+Shift+=)")
+X(S_TIP_COLOR,          L"글자 색",                         L"Text color")
+X(S_TIP_HIGHLIGHT,      L"텍스트 강조 색",                  L"Text highlight color")
+X(S_TIP_INDENT_DEC,     L"내어쓰기",                        L"Decrease indent")
+X(S_TIP_INDENT_INC,     L"들여쓰기",                        L"Increase indent")
+X(S_TIP_LIST,           L"목록 (Ctrl+Shift+L)",             L"List (Ctrl+Shift+L)")
+X(S_TIP_SPACING,        L"줄 간격",                         L"Line spacing")
+X(S_TIP_ALIGN_LEFT,     L"왼쪽 맞춤 (Ctrl+L)",              L"Align left (Ctrl+L)")
+X(S_TIP_ALIGN_CENTER,   L"가운데 맞춤 (Ctrl+E)",            L"Center (Ctrl+E)")
+X(S_TIP_ALIGN_RIGHT,    L"오른쪽 맞춤 (Ctrl+R)",            L"Align right (Ctrl+R)")
+X(S_TIP_ALIGN_JUSTIFY,  L"양쪽 맞춤 (Ctrl+J)",              L"Justify (Ctrl+J)")
+X(S_TIP_PARAGRAPH,      L"단락 설정",                       L"Paragraph settings")
+X(S_TIP_PICTURE,        L"그림 삽입",                       L"Insert picture")
+X(S_TIP_DATETIME,       L"날짜 및 시간 삽입",               L"Insert date and time")
+X(S_TIP_OBJECT,         L"개체 삽입",                       L"Insert object")
+X(S_TIP_FIND,           L"찾기 (Ctrl+F)",                   L"Find (Ctrl+F)")
+X(S_TIP_REPLACE,        L"바꾸기 (Ctrl+H)",                 L"Replace (Ctrl+H)")
+X(S_TIP_SELECTALL,      L"모두 선택 (Ctrl+A)",              L"Select all (Ctrl+A)")
+X(S_TIP_ZOOMOUT,        L"축소",                            L"Zoom out")
+X(S_TIP_ZOOMIN,         L"확대",                            L"Zoom in")
+X(S_TIP_ZOOMRESET,      L"100%로 되돌리기",                 L"Reset to 100%")
+
+// ---- Color popup ----
+X(S_COLOR_AUTO,         L"자동",                            L"Automatic")
+X(S_COLOR_NONE,         L"색 없음",                         L"No color")
+X(S_COLOR_MORE,         L"다른 색...",                      L"More colors...")
+
+// ---- Status bar ----
+X(S_STATUS_LINECOL,     L"줄 %d, 열 %d",                    L"Ln %d, Col %d")
+X(S_STATUS_CHARS,       L"%s자",                            L"%s characters")
+X(S_STATUS_WORDS,       L"단어 %s개",                       L"%s words")
+X(S_STATUS_SELECTED,    L"%s자 선택됨",                     L"%s selected")
+
+// ---- File dialog filters / formats ----
+X(S_FILTER_ALLDOCS,     L"모든 문서 (*.rtf;*.docx;*.odt;*.txt)", L"All Documents (*.rtf;*.docx;*.odt;*.txt)")
+X(S_FILTER_RTF,         L"서식 있는 텍스트 (*.rtf)",        L"Rich Text Format (*.rtf)")
+X(S_FILTER_DOCX,        L"Office Open XML 문서 (*.docx)",   L"Office Open XML Document (*.docx)")
+X(S_FILTER_ODT,         L"OpenDocument 텍스트 (*.odt)",     L"OpenDocument Text (*.odt)")
+X(S_FILTER_TXT,         L"텍스트 문서 (*.txt)",             L"Text Document (*.txt)")
+X(S_FILTER_TXT_UTF16,   L"유니코드 텍스트 문서 - UTF-16 (*.txt)", L"Unicode Text Document - UTF-16 (*.txt)")
+X(S_FILTER_TXT_ANSI,    L"텍스트 문서 - ANSI (*.txt)",      L"Text Document - ANSI (*.txt)")
+X(S_FILTER_ALL,         L"모든 파일 (*.*)",                 L"All Files (*.*)")
+X(S_FILTER_IMAGES,      L"그림 파일 (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.tif;*.tiff;*.ico)", L"Picture Files (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.tif;*.tiff;*.ico)")
+X(S_TITLE_INSERTPICTURE,L"그림 삽입",                       L"Insert Picture")
+
+// ---- Messages ----
+X(S_MSG_SAVECHANGES,    L"%s의 변경 내용을 저장하시겠습니까?", L"Do you want to save changes to %s?")
+X(S_MSG_SAVE,           L"저장(&S)",                        L"&Save")
+X(S_MSG_DONTSAVE,       L"저장 안 함(&N)",                  L"Do&n't Save")
+X(S_MSG_CANCEL,         L"취소",                            L"Cancel")
+X(S_MSG_OPENFAILED,     L"파일을 열 수 없습니다.\n%s",      L"The file could not be opened.\n%s")
+X(S_MSG_SAVEFAILED,     L"파일을 저장할 수 없습니다.\n%s",  L"The file could not be saved.\n%s")
+X(S_MSG_UNSUPPORTED,    L"지원하지 않는 파일 형식입니다.\n%s", L"This file format is not supported.\n%s")
+X(S_MSG_OLDDOC,         L"이 파일은 이전 Word 이진 형식(.doc)이므로 열 수 없습니다. Word에서 .docx 또는 .rtf로 저장한 다음 다시 열어 주십시오.\n%s", L"This file uses the legacy Word binary format (.doc) and cannot be opened. Save it as .docx or .rtf first.\n%s")
+X(S_MSG_TEXTONLY,       L"이 문서를 일반 텍스트로 저장하면 서식, 그림, 개체가 모두 제거됩니다.\n\n계속 저장하시겠습니까?", L"Saving this document as plain text will remove all formatting, pictures and objects.\n\nDo you want to continue?")
+X(S_MSG_LOSSY,          L"이 형식으로 저장하면 일부 서식이나 개체가 유지되지 않을 수 있습니다.\n\n계속 저장하시겠습니까?", L"Some formatting or objects may not be preserved in this format.\n\nDo you want to continue?")
+X(S_MSG_ANSILOSS,       L"이 문서에는 ANSI 인코딩으로 표현할 수 없는 문자가 있습니다. ANSI로 저장하면 해당 문자가 손실됩니다.\n\n계속 저장하시겠습니까?", L"This document contains characters that cannot be represented in the ANSI encoding and will be lost.\n\nDo you want to continue?")
+X(S_MSG_NOTFOUND,       L"\"%s\"을(를) 찾을 수 없습니다.",  L"Cannot find \"%s\".")
+X(S_MSG_REPLACED,       L"%d개 항목을 바꿨습니다.",         L"%d replacements were made.")
+X(S_MSG_SEARCHDONE,     L"문서 검색을 마쳤습니다.",         L"Finished searching the document.")
+X(S_MSG_PICTUREFAILED,  L"그림을 삽입할 수 없습니다.\n%s",  L"The picture could not be inserted.\n%s")
+X(S_MSG_OBJECTFAILED,   L"개체를 삽입할 수 없습니다.",      L"The object could not be inserted.")
+X(S_MSG_PRINTFAILED,    L"문서를 인쇄할 수 없습니다.",      L"The document could not be printed.")
+X(S_MSG_NOPRINTER,      L"사용할 수 있는 프린터가 없습니다. Windows 설정에서 프린터를 추가한 다음 다시 시도해 주십시오.", L"No printer is available. Add a printer in Windows Settings and try again.")
+X(S_MSG_INVALIDNUMBER,  L"올바른 숫자를 입력해 주십시오.",  L"Please enter a valid number.")
+X(S_MSG_INVALIDSIZE,    L"글꼴 크기는 1에서 1638 사이의 숫자여야 합니다.", L"The font size must be a number between 1 and 1638.")
+X(S_MSG_ASSOC_DONE,     L"RichPad를 .rtf, .docx, .odt, .txt 파일의 연결 프로그램 목록에 등록했습니다.\n\n기본 앱으로 지정하려면 파일을 마우스 오른쪽 단추로 누르고 [연결 프로그램] > [다른 앱 선택]에서 RichPad를 선택한 다음 [항상]을 누르십시오.", L"RichPad has been added to the \"Open with\" list for .rtf, .docx, .odt and .txt files.\n\nTo make it the default, right-click a file, choose Open with > Choose another app, select RichPad and click Always.")
+X(S_MSG_ASSOC_ASK,      L"RichPad를 .rtf, .docx, .odt, .txt 파일의 연결 프로그램으로 등록하시겠습니까?\n\n현재 사용자 계정에만 적용되며, 관리자 권한은 필요하지 않습니다.", L"Register RichPad as a program for .rtf, .docx, .odt and .txt files?\n\nThis applies to the current user only and does not require administrator rights.")
+X(S_MSG_ASSOC_REGISTER, L"등록(&R)",                        L"&Register")
+X(S_MSG_ASSOC_REMOVE,   L"등록 해제(&U)",                   L"&Unregister")
+X(S_MSG_ASSOC_REMOVED,  L"파일 형식 연결을 해제했습니다.",  L"File associations were removed.")
+X(S_MSG_READONLY,       L"이 파일은 읽기 전용입니다. 다른 이름으로 저장해 주십시오.", L"This file is read-only. Save it under a different name.")
+X(S_MSG_CONVERTWARN,    L"이 문서에는 RichPad에서 표시할 수 없는 내용이 있을 수 있습니다. 원본을 보존하려면 다른 이름으로 저장하십시오.", L"This document may contain content that RichPad cannot display. Save under a different name to keep the original.")
+
+// ---- Paragraph dialog ----
+X(S_DLG_PARAGRAPH,      L"단락",                            L"Paragraph")
+X(S_DLG_INDENT,         L"들여쓰기",                        L"Indentation")
+X(S_DLG_LEFT,           L"왼쪽(&L):",                       L"&Left:")
+X(S_DLG_RIGHT,          L"오른쪽(&R):",                     L"&Right:")
+X(S_DLG_FIRSTLINE,      L"첫 줄(&F):",                      L"&First line:")
+X(S_DLG_SPACING,        L"간격",                            L"Spacing")
+X(S_DLG_LINESPACING,    L"줄 간격(&S):",                    L"Line &spacing:")
+X(S_DLG_SPACEAFTER,     L"단락 뒤에 10pt 공백 추가(&A)",    L"&Add 10pt space after paragraphs")
+X(S_DLG_ALIGNMENT,      L"맞춤(&G):",                       L"Ali&gnment:")
+X(S_DLG_ALIGN_LEFT,     L"왼쪽",                            L"Left")
+X(S_DLG_ALIGN_CENTER,   L"가운데",                          L"Center")
+X(S_DLG_ALIGN_RIGHT,    L"오른쪽",                          L"Right")
+X(S_DLG_ALIGN_JUSTIFY,  L"양쪽",                            L"Justified")
+X(S_DLG_OK,             L"확인",                            L"OK")
+X(S_DLG_CANCEL,         L"취소",                            L"Cancel")
+X(S_DLG_CLOSE,          L"닫기",                            L"Close")
+
+// ---- Tabs dialog ----
+X(S_DLG_TABS,           L"탭",                              L"Tabs")
+X(S_DLG_TABSTOP,        L"탭 위치(&T):",                    L"&Tab stop position:")
+X(S_DLG_TAB_SET,        L"설정(&S)",                        L"&Set")
+X(S_DLG_TAB_CLEAR,      L"지우기(&E)",                      L"Cl&ear")
+X(S_DLG_TAB_CLEARALL,   L"모두 지우기(&A)",                 L"Clear &All")
+
+// ---- Date/time dialog ----
+X(S_DLG_DATETIME,       L"날짜 및 시간",                    L"Date and Time")
+X(S_DLG_FORMATS,        L"사용 가능한 형식(&A):",           L"&Available formats:")
+
+// ---- Picture size dialog ----
+X(S_DLG_PICTURESIZE,    L"그림 크기 조정",                  L"Resize Picture")
+X(S_DLG_PIC_WIDTH,      L"가로(&H) (%):",                   L"&Horizontal (%):")
+X(S_DLG_PIC_HEIGHT,     L"세로(&V) (%):",                   L"&Vertical (%):")
+X(S_DLG_PIC_LOCK,       L"가로 세로 비율 고정(&L)",         L"&Lock aspect ratio")
+
+// ---- About ----
+X(S_DLG_ABOUT,          L"RichPad 정보",                    L"About RichPad")
+X(S_ABOUT_VERSION,      L"버전 %s",                         L"Version %s")
+X(S_ABOUT_DESC,         L"Windows 11을 위한 서식 있는 텍스트 편집기입니다. RTF, DOCX, ODT, TXT 문서를 열고 편집하고 인쇄할 수 있습니다.", L"A rich text editor for Windows 11. Open, edit and print RTF, DOCX, ODT and TXT documents.")
+X(S_ABOUT_NOTE,         L"이 프로그램은 독립적으로 제작된 오픈 소스 앱이며 Microsoft와 관련이 없습니다.", L"This is an independent open-source app and is not affiliated with Microsoft.")
+
+// ---- Shortcuts help ----
+X(S_SHORTCUTS_TITLE,    L"바로 가기 키",                    L"Keyboard Shortcuts")
+X(S_SHORTCUTS_TEXT,
+  L"Ctrl+N\t새로 만들기\nCtrl+O\t열기\nCtrl+S\t저장\nF12\t다른 이름으로 저장\nCtrl+P\t인쇄\n\n"
+  L"Ctrl+Z / Ctrl+Y\t실행 취소 / 다시 실행\nCtrl+F / F3\t찾기 / 다음 찾기\nCtrl+H\t바꾸기\nCtrl+Shift+V\t서식 없이 붙여넣기\n\n"
+  L"Ctrl+B / I / U\t굵게 / 기울임꼴 / 밑줄\nCtrl+Shift+> / <\t글꼴 크게 / 작게\nCtrl+= / Ctrl+Shift+=\t아래 첨자 / 위 첨자\n"
+  L"Ctrl+L / E / R / J\t왼쪽 / 가운데 / 오른쪽 / 양쪽 맞춤\nCtrl+1 / 2 / 5\t줄 간격 1.0 / 2.0 / 1.5\nCtrl+Shift+L\t글머리 기호\nCtrl+D\t글꼴 대화 상자\nCtrl+Space\t서식 지우기\n\n"
+  L"Ctrl+휠, Ctrl++ / Ctrl+-\t확대 / 축소\nCtrl+0\t100%",
+  L"Ctrl+N\tNew\nCtrl+O\tOpen\nCtrl+S\tSave\nF12\tSave As\nCtrl+P\tPrint\n\n"
+  L"Ctrl+Z / Ctrl+Y\tUndo / Redo\nCtrl+F / F3\tFind / Find next\nCtrl+H\tReplace\nCtrl+Shift+V\tPaste as plain text\n\n"
+  L"Ctrl+B / I / U\tBold / Italic / Underline\nCtrl+Shift+> / <\tGrow / shrink font\nCtrl+= / Ctrl+Shift+=\tSubscript / Superscript\n"
+  L"Ctrl+L / E / R / J\tAlign left / center / right / justify\nCtrl+1 / 2 / 5\tLine spacing 1.0 / 2.0 / 1.5\nCtrl+Shift+L\tBullets\nCtrl+D\tFont dialog\nCtrl+Space\tClear formatting\n\n"
+  L"Ctrl+Wheel, Ctrl++ / Ctrl+-\tZoom in / out\nCtrl+0\t100%")
+
+// ---- Print preview ----
+X(S_PREVIEW_TITLE,      L"인쇄 미리 보기",                  L"Print Preview")
+X(S_PREVIEW_PRINT,      L"인쇄(&P)...",                     L"&Print...")
+X(S_PREVIEW_PREV,       L"이전 페이지(&V)",                 L"Pre&vious Page")
+X(S_PREVIEW_NEXT,       L"다음 페이지(&N)",                 L"&Next Page")
+X(S_PREVIEW_ONEPAGE,    L"한 페이지(&O)",                   L"&One Page")
+X(S_PREVIEW_TWOPAGES,   L"두 페이지(&T)",                   L"&Two Pages")
+X(S_PREVIEW_ZOOMIN,     L"확대(&I)",                        L"Zoom &In")
+X(S_PREVIEW_ZOOMOUT,    L"축소(&U)",                        L"Zoom O&ut")
+X(S_PREVIEW_CLOSE,      L"닫기(&C)",                        L"&Close")
+X(S_PREVIEW_PAGE,       L"%d / %d 페이지",                  L"Page %d of %d")
+X(S_PRINTING,           L"인쇄하는 중: %d 페이지",          L"Printing page %d")
+
+// ---- Units ----
+X(S_UNIT_INCH,          L"\"",                              L"\"")
+X(S_UNIT_CM,            L"cm",                              L"cm")
+X(S_UNIT_PT,            L"pt",                              L"pt")
+X(S_UNIT_PICA,          L"pi",                              L"pi")
+
+// ---- Context menu ----
+X(S_CTX_OPENLINK,       L"링크 열기(&O)",                   L"&Open Link")
+X(S_CTX_COPYLINK,       L"링크 복사(&L)",                   L"Copy &Link")

@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A ${{ matrix.arch }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      # The self test drives the real main window on a real Windows desktop:
+      # formatting, file formats, printing (to PDF) and the user interface.
+      - name: Self test
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path selftest | Out-Null
+          $log = Join-Path (Resolve-Path selftest) "selftest.log"
+          $p = Start-Process -FilePath "build\Release\RichPad.exe" -ArgumentList "/selftest", "`"$log`"" -PassThru
+          if (-not $p.WaitForExit(300000)) {
+            $p.Kill()
+            Write-Host "::error::The self test timed out"
+          }
+          if (Test-Path $log) { Get-Content $log -Encoding UTF8 }
+          if ($p.ExitCode -ne 0) {
+            Write-Host "::error::The self test failed (exit code $($p.ExitCode))"
+            exit 1
+          }
+
+      - name: Upload RichPad.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: RichPad-${{ matrix.arch }}
+          path: build/Release/RichPad.exe
+          if-no-files-found: error
+
+      - name: Upload self test results
+        if: always() && matrix.arch == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-results
+          path: selftest/
+          if-no-files-found: ignore

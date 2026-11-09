@@ -63,25 +63,6 @@ struct Painter {
         SolidBrush br(c);
         g.FillRectangle(&br, RectF(ox + x * s, oy + y * s, w * s, h * s));
     }
-    // Draws text as a filled outline, centred horizontally on cx with the glyph box centred on cy.
-    void Text(const wchar_t* text, REAL cx, REAL cy, REAL em, INT style) const {
-        FontFamily segoe(L"Segoe UI");
-        const FontFamily* family = &segoe;
-        FontFamily arial(L"Arial");
-        if (segoe.GetLastStatus() != Ok || !segoe.IsAvailable()) family = &arial;
-        if (!family->IsAvailable()) family = FontFamily::GenericSansSerif();
-        if (!family->IsStyleAvailable(style)) style = FontStyleRegular;
-        GraphicsPath path;
-        StringFormat fmt(StringFormat::GenericTypographic());
-        path.AddString(text, -1, family, style, em * s, PointF(0, 0), &fmt);
-        RectF b;
-        path.GetBounds(&b);
-        Matrix m;
-        m.Translate(ox + cx * s - (b.X + b.Width / 2), oy + cy * s - (b.Y + b.Height / 2));
-        path.Transform(&m);
-        SolidBrush br(col);
-        g.FillPath(&br, &path);
-    }
     RectF Box(REAL cx, REAL cy, REAL r) const { return RectF(ox + (cx - r) * s, oy + (cy - r) * s, 2 * r * s, 2 * r * s); }
     void Stroke(GraphicsPath& path) const {
         Pen pen(col, pw); SetupPen(pen);

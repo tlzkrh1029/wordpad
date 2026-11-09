@@ -255,18 +255,20 @@ X(S_DLG_PIC_LOCK,       L"가로 세로 비율 고정(&L)",         L"&Lock aspe
 X(S_DLG_ABOUT,          L"RichPad 정보",                    L"About RichPad")
 X(S_ABOUT_VERSION,      L"버전 %s",                         L"Version %s")
 X(S_ABOUT_DESC,         L"Windows 11을 위한 서식 있는 텍스트 편집기입니다. RTF, DOCX, ODT, TXT 문서를 열고 편집하고 인쇄할 수 있습니다.", L"A rich text editor for Windows 11. Open, edit and print RTF, DOCX, ODT and TXT documents.")
-X(S_ABOUT_NOTE,         L"이 프로그램은 독립적으로 제작된 오픈 소스 앱이며 Microsoft와 관련이 없습니다.", L"This is an independent open-source app and is not affiliated with Microsoft.")
+X(S_ABOUT_NOTE,         L"이 프로그램은 독립적으로 제작된 앱이며 Microsoft와 관련이 없습니다.", L"This is an independent app and is not affiliated with Microsoft.")
 
 // ---- Shortcuts help ----
 X(S_SHORTCUTS_TITLE,    L"바로 가기 키",                    L"Keyboard Shortcuts")
 X(S_SHORTCUTS_TEXT,
-  L"Ctrl+N\t새로 만들기\nCtrl+O\t열기\nCtrl+S\t저장\nF12\t다른 이름으로 저장\nCtrl+P\t인쇄\n\n"
-  L"Ctrl+Z / Ctrl+Y\t실행 취소 / 다시 실행\nCtrl+F / F3\t찾기 / 다음 찾기\nCtrl+H\t바꾸기\nCtrl+Shift+V\t서식 없이 붙여넣기\n\n"
+  L"Ctrl+N\t새로 만들기\nCtrl+Shift+N\t새 창\nCtrl+O\t열기\nCtrl+S\t저장\nF12, Ctrl+Shift+S\t다른 이름으로 저장\nCtrl+P\t인쇄\nCtrl+F2\t인쇄 미리 보기\n\n"
+  L"Ctrl+Z / Ctrl+Y\t실행 취소 / 다시 실행\nCtrl+F\t찾기\nF3 / Shift+F3\t다음 찾기 / 이전 찾기\nCtrl+H\t바꾸기\n"
+  L"Ctrl+Alt+V\t선택하여 붙여넣기\nCtrl+Shift+V\t서식 없이 붙여넣기\nCtrl+클릭\t링크 열기\n\n"
   L"Ctrl+B / I / U\t굵게 / 기울임꼴 / 밑줄\nCtrl+Shift+> / <\t글꼴 크게 / 작게\nCtrl+= / Ctrl+Shift+=\t아래 첨자 / 위 첨자\n"
   L"Ctrl+L / E / R / J\t왼쪽 / 가운데 / 오른쪽 / 양쪽 맞춤\nCtrl+1 / 2 / 5\t줄 간격 1.0 / 2.0 / 1.5\nCtrl+Shift+L\t글머리 기호\nCtrl+D\t글꼴 대화 상자\nCtrl+Space\t서식 지우기\n\n"
   L"Ctrl+휠, Ctrl++ / Ctrl+-\t확대 / 축소\nCtrl+0\t100%",
-  L"Ctrl+N\tNew\nCtrl+O\tOpen\nCtrl+S\tSave\nF12\tSave As\nCtrl+P\tPrint\n\n"
-  L"Ctrl+Z / Ctrl+Y\tUndo / Redo\nCtrl+F / F3\tFind / Find next\nCtrl+H\tReplace\nCtrl+Shift+V\tPaste as plain text\n\n"
+  L"Ctrl+N\tNew\nCtrl+Shift+N\tNew window\nCtrl+O\tOpen\nCtrl+S\tSave\nF12, Ctrl+Shift+S\tSave As\nCtrl+P\tPrint\nCtrl+F2\tPrint preview\n\n"
+  L"Ctrl+Z / Ctrl+Y\tUndo / Redo\nCtrl+F\tFind\nF3 / Shift+F3\tFind next / previous\nCtrl+H\tReplace\n"
+  L"Ctrl+Alt+V\tPaste special\nCtrl+Shift+V\tPaste as plain text\nCtrl+click\tOpen a link\n\n"
   L"Ctrl+B / I / U\tBold / Italic / Underline\nCtrl+Shift+> / <\tGrow / shrink font\nCtrl+= / Ctrl+Shift+=\tSubscript / Superscript\n"
   L"Ctrl+L / E / R / J\tAlign left / center / right / justify\nCtrl+1 / 2 / 5\tLine spacing 1.0 / 2.0 / 1.5\nCtrl+Shift+L\tBullets\nCtrl+D\tFont dialog\nCtrl+Space\tClear formatting\n\n"
   L"Ctrl+Wheel, Ctrl++ / Ctrl+-\tZoom in / out\nCtrl+0\t100%")

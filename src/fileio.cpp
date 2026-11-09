@@ -314,11 +314,8 @@ bool File_Serialize(DocFormat format, bool utf8Bom, std::vector<BYTE>& out)
         return true;
     }
 
-    std::string raw;
-    if (!Editor_StreamOut(raw, SF_TEXT | SF_UNICODE)) return false;
-    std::wstring text((const wchar_t*)raw.data(), raw.size() / sizeof(wchar_t));
-    // Embedded objects appear as U+FFFC in the plain text; they have no textual representation.
-    text.erase(std::remove(text.begin(), text.end(), (wchar_t)0xFFFC), text.end());
+    // The text as it is displayed: no hidden text (link addresses) and no object placeholders.
+    std::wstring text = Editor_GetPlainText();
 
     if (format == FMT_TEXT_UTF16) {
         out.resize(2 + text.size() * 2);
@@ -345,12 +342,10 @@ bool File_Save(const std::wstring& path, DocFormat format, bool utf8Bom, DWORD* 
 
 bool File_CanSaveAsAnsi()
 {
-    std::string raw;
-    if (!Editor_StreamOut(raw, SF_TEXT | SF_UNICODE)) return true;
-    size_t count = raw.size() / sizeof(wchar_t);
-    if (count == 0) return true;
+    std::wstring text = Editor_GetPlainText();
+    if (text.empty()) return true;
     BOOL usedDefault = FALSE;
-    WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, (const wchar_t*)raw.data(), (int)count, nullptr, 0, nullptr, &usedDefault);
+    WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, text.c_str(), (int)text.size(), nullptr, 0, nullptr, &usedDefault);
     return !usedDefault;
 }
 

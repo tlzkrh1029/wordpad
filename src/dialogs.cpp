@@ -532,7 +532,7 @@ void Dlg_ShowFind(bool replace)
         Dlg_CloseFind();
     }
     // Seed the search box with a short single-line selection.
-    std::wstring sel = Editor_GetText(true);
+    std::wstring sel = Editor_GetText(true, true);
     if (!sel.empty() && sel.size() < ARRAYSIZE(g_findBuf) && sel.find_first_of(L"\r\n\x0B\xFFFC") == std::wstring::npos)
         lstrcpynW(g_findBuf, sel.c_str(), ARRAYSIZE(g_findBuf));
     else if (!g_lastFind.empty())
@@ -553,7 +553,7 @@ void Dlg_ShowFind(bool replace)
 void Dlg_FindNext(bool reverse)
 {
     if (g_lastFind.empty()) {
-        std::wstring sel = Editor_GetText(true);
+        std::wstring sel = Editor_GetText(true, true);
         if (!sel.empty() && sel.size() < 200 && sel.find_first_of(L"\r\n") == std::wstring::npos) g_lastFind = sel;
     }
     if (g_lastFind.empty()) { Dlg_ShowFind(false); return; }

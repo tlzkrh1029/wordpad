@@ -172,6 +172,8 @@ X(S_STATUS_LINECOL,     L"줄 %d, 열 %d",                    L"Ln %d, Col %d")
 X(S_STATUS_CHARS,       L"%s자",                            L"%s characters")
 X(S_STATUS_WORDS,       L"단어 %s개",                       L"%s words")
 X(S_STATUS_SELECTED,    L"%s자 선택됨",                     L"%s selected")
+X(S_STATUS_LINKOPEN,    L"Ctrl+클릭하여 링크 열기: %s",     L"Ctrl+click to open the link: %s")
+X(S_STATUS_LINK,        L"링크: %s",                        L"Link: %s")
 
 // ---- File dialog filters / formats ----
 X(S_FILTER_ALLDOCS,     L"모든 문서 (*.rtf;*.docx;*.odt;*.txt)", L"All Documents (*.rtf;*.docx;*.odt;*.txt)")

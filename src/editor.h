@@ -21,7 +21,13 @@ void Editor_SetSel(LONG cpMin, LONG cpMax);
 bool Editor_HasSelection();
 bool Editor_IsModified();
 void Editor_SetModified(bool modified);
-std::wstring Editor_GetText(bool selectionOnly);
+// Hidden text is the part of the backing store that the control does not show: the rich edit control
+// keeps the address of a link as hidden text in front of the link's visible name.
+std::wstring Editor_GetText(bool selectionOnly, bool visibleOnly = false);
+std::wstring Editor_GetPlainText();      // what is saved to a text file: visible text, CR LF line ends
+bool Editor_IsRangeHidden(LONG cpMin, LONG cpMax);   // true when any part of the range is hidden
+std::wstring Editor_LinkTarget(const CHARRANGE& range);   // address of the link reported by EN_LINK
+void Editor_NoteLinkUnderMouse(UINT msg, const std::wstring& url);   // from EN_LINK (WM_SETCURSOR / WM_MOUSEMOVE)
 void Editor_ReplaceSel(const wchar_t* text, bool canUndo = true);
 void Editor_Clear();                     // empties the document and the undo stack
 

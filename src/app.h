@@ -37,6 +37,7 @@
 #define WM_APP_FONTAPPLY    (WM_APP + 4)   // wParam: 0 = face name, 1 = size (from command bar)
 #define WM_APP_RULERCHANGED (WM_APP + 5)   // ruler modified paragraph formatting
 #define WM_APP_SETZOOM      (WM_APP + 6)   // wParam: percent (from status bar)
+#define WM_APP_OPENLINK     (WM_APP + 7)   // open the link that was Ctrl+clicked (posted)
 
 enum WrapMode  { WRAP_NONE = 0, WRAP_WINDOW = 1, WRAP_RULER = 2 };
 enum UnitMode  { UNIT_INCH = 0, UNIT_CM = 1, UNIT_PT = 2, UNIT_PICA = 3 };
@@ -125,6 +126,11 @@ bool App_Save(bool saveAs);
 void App_NewDocument();
 void App_OnCommand(int id);
 void App_ShowContextMenu(POINT ptScreen);
+void App_SetLinkHint(const std::wstring& url);   // address of the link under the mouse pointer ("" = none)
+void App_ForgetContextLink();                    // the next context menu does not belong to a link
+// Self test: observe what the edit control reports about links instead of acting on it.
+typedef void (*LinkTestHook)(UINT msg, const CHARRANGE& range, const std::wstring& url);
+void App_SetLinkTestHook(LinkTestHook hook);
 
 // ---- settings.cpp ----------------------------------------------------------
 void Settings_Load();

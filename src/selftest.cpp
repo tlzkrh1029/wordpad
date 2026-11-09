@@ -970,9 +970,48 @@ void PreviewVisitor(HWND preview, const wchar_t* name)
     SaveWindowPng(preview, (std::wstring(L"selftest-preview-") + name + L".png").c_str());
 }
 
+// What the edit control reported about links while the mouse was simulated.
+struct LinkEvent { UINT msg; CHARRANGE range; std::wstring url; };
+std::vector<LinkEvent> g_linkEvents;
+
+void LinkHook(UINT msg, const CHARRANGE& range, const std::wstring& url)
+{
+    g_linkEvents.push_back({ msg, range, url });
+}
+
+const char* MouseMessageName(UINT msg)
+{
+    switch (msg) {
+    case WM_SETCURSOR: return "WM_SETCURSOR";
+    case WM_MOUSEMOVE: return "WM_MOUSEMOVE";
+    case WM_LBUTTONDOWN: return "WM_LBUTTONDOWN";
+    case WM_LBUTTONUP: return "WM_LBUTTONUP";
+    default: return "other";
+    }
+}
+
+// Moves the mouse pointer onto the character at the given position (the control looks at the real
+// pointer position for WM_SETCURSOR) and lets the control process the move.
+void HoverChar(LONG cp)
+{
+    POINTL p = {};
+    SendMessageW(g.hEdit, EM_POSFROMCHAR, (WPARAM)&p, cp);
+    POINT screen = { p.x + 3, p.y + 6 };
+    LPARAM where = MAKELPARAM(screen.x, screen.y);
+    ClientToScreen(g.hEdit, &screen);
+    SetCursorPos(screen.x, screen.y);
+    Pump(30);
+    SendMessageW(g.hEdit, WM_SETCURSOR, (WPARAM)g.hEdit, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+    SendMessageW(g.hEdit, WM_MOUSEMOVE, 0, where);
+    Pump(30);
+}
+
 void TestHyperlinks()
 {
     Section("Hyperlinks");
+    POINT savedCursor = {};
+    GetCursorPos(&savedCursor);
+    const std::wstring target = L"https://example.com/docs";
     // A document with a hyperlink, as the DOCX / ODT readers hand it to the control.
     const char* rtf =
         "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0\\fnil\\fcharset0 Calibri;}}{\\colortbl ;\\red0\\green0\\blue255;}"
@@ -984,9 +1023,83 @@ void TestHyperlinks()
     DocFormat fmt = FMT_TEXT_UTF8;
     bool loaded = File_LoadData(data, L"x.rtf", &fmt, nullptr) == LOAD_OK;
     std::wstring text = Editor_GetText(false);
+    std::wstring visible = Normalize(Editor_GetText(false, true));
     Line("text after loading: \"%s\"", U8(Normalize(text)).c_str());
+    Line("visible text: \"%s\"", U8(visible).c_str());
     Check(loaded && text.find(L"Visit ") != std::wstring::npos && text.find(L" today.") != std::wstring::npos, "text around the link is kept");
-    CheckWin(text.find(L"the site") != std::wstring::npos, "link text is visible");
+    CheckWin(visible == L"Visit the site today.", "link text is visible, the address is not");
+
+    // Saving as text writes what is displayed.
+    std::vector<BYTE> plain;
+    File_Serialize(FMT_TEXT_UTF8, false, plain);
+    std::string plainText(plain.begin(), plain.end());
+    while (!plainText.empty() && (plainText.back() == '\r' || plainText.back() == '\n')) plainText.pop_back();
+    CheckWin(plainText == "Visit the site today.", "plain text leaves out the hidden address", "\"%s\"", plainText.c_str());
+    {
+        std::string raw;
+        Editor_StreamOut(raw, SF_TEXT | SF_UNICODE);
+        std::wstring streamed((const wchar_t*)raw.data(), raw.size() / sizeof(wchar_t));
+        Line("SF_TEXT stream: \"%s\"", U8(streamed).c_str());
+    }
+
+    // Searching only finds what is displayed.
+    Editor_SetSel(0, 0);
+    bool foundHidden = Editor_Find(L"example", false, false, true, true);
+    Editor_SetSel(0, 0);
+    bool foundVisible = Editor_Find(L"site", false, false, true, true);
+    CHARRANGE found; Editor_GetSel(found);
+    Check(!foundHidden, "search skips the hidden address");
+    CheckWin(foundVisible && Editor_GetText(true) == L"site" && !Editor_IsRangeHidden(found.cpMin, found.cpMax),
+             "search finds the link text", "%ld..%ld", found.cpMin, found.cpMax);
+    Editor_SetSel(0, 0);
+    int replaced = Editor_ReplaceAll(L"example", L"changed", false, false);
+    std::vector<BYTE> afterReplace;
+    File_Serialize(FMT_RTF, false, afterReplace);
+    std::string afterReplaceRtf(afterReplace.begin(), afterReplace.end());
+    CheckWin(replaced == 0 && afterReplaceRtf.find("example.com/docs") != std::string::npos,
+             "replace all leaves the hidden address alone", "%d replaced", replaced);
+
+    // The address of the link, whichever part of it the control reports.
+    size_t namePos = text.find(L"the site");
+    size_t fieldPos = text.find(L"HYPERLINK");
+    size_t urlPos = text.find(target);
+    if (namePos != std::wstring::npos && fieldPos != std::wstring::npos && urlPos != std::wstring::npos) {
+        CHARRANGE name = { (LONG)namePos, (LONG)namePos + 8 };
+        CHARRANGE whole = { (LONG)fieldPos, (LONG)namePos + 8 };
+        CHARRANGE address = { (LONG)urlPos, (LONG)(urlPos + target.size()) };
+        std::wstring a = Editor_LinkTarget(name), b = Editor_LinkTarget(whole), c = Editor_LinkTarget(address);
+        Check(a == target && b == target && c == target, "link address is resolved from any part of the link",
+              "name: %s, field: %s, address: %s", U8(a).c_str(), U8(b).c_str(), U8(c).c_str());
+        Line("hidden: field=%d name=%d", (int)Editor_IsRangeHidden((LONG)fieldPos, (LONG)namePos), (int)Editor_IsRangeHidden(name.cpMin, name.cpMax));
+
+        // What does the control report when the mouse is over the link, and when it is clicked?
+        g_linkEvents.clear();
+        App_SetLinkTestHook(LinkHook);
+        HoverChar((LONG)namePos + 2);
+        POINTL p = {};
+        SendMessageW(g.hEdit, EM_POSFROMCHAR, (WPARAM)&p, (LPARAM)namePos + 2);
+        LPARAM where = MAKELPARAM(p.x + 3, p.y + 6);
+        SendMessageW(g.hEdit, WM_LBUTTONDOWN, MK_LBUTTON, where);
+        SendMessageW(g.hEdit, WM_LBUTTONUP, 0, where);
+        Pump(30);
+        App_SetLinkTestHook(nullptr);
+        bool reported = false;
+        for (const LinkEvent& e : g_linkEvents) {
+            Line("EN_LINK %s range %ld..%ld -> %s", MouseMessageName(e.msg), e.range.cpMin, e.range.cpMax, U8(e.url).c_str());
+            if (e.url == target) reported = true;
+        }
+        CheckWin(reported, "mouse over the link reports its address", "%u notifications", (unsigned)g_linkEvents.size());
+
+        // The status bar shows where the link leads while the pointer rests on it.
+        HoverChar((LONG)namePos + 2);
+        std::wstring hint = StatusBar_GetText();
+        HoverChar(1);
+        std::wstring afterLeaving = StatusBar_GetText();
+        CheckWin(hint.find(target) != std::wstring::npos && afterLeaving.find(target) == std::wstring::npos,
+                 "status bar shows the link address", "\"%s\" then \"%s\"", U8(hint).c_str(), U8(afterLeaving).c_str());
+    } else {
+        CheckWin(false, "link address is resolved from any part of the link", "the field is not in the text");
+    }
 
     // Saving keeps the link target so it survives a DOCX round trip.
     std::vector<BYTE> out;
@@ -997,8 +1110,18 @@ void TestHyperlinks()
     bool exported = File_Serialize(FMT_DOCX, false, docx);
     NewDoc();
     bool reloaded = exported && File_LoadData(docx, L"x.docx", &fmt, nullptr) == LOAD_OK;
-    std::wstring again = Editor_GetText(false);
-    CheckWin(reloaded && again.find(L"the site") != std::wstring::npos, "link survives a DOCX round trip", "\"%s\"", U8(Normalize(again)).c_str());
+    std::wstring again = Normalize(Editor_GetText(false, true));
+    CheckWin(reloaded && again == L"Visit the site today.", "link survives a DOCX round trip", "\"%s\"", U8(again).c_str());
+    std::vector<BYTE> odt;
+    exported = File_Serialize(FMT_ODT, false, odt);
+    NewDoc();
+    reloaded = exported && File_LoadData(odt, L"x.odt", &fmt, nullptr) == LOAD_OK;
+    again = Normalize(Editor_GetText(false, true));
+    std::vector<BYTE> odtRtf;
+    File_Serialize(FMT_RTF, false, odtRtf);
+    std::string odtSaved(odtRtf.begin(), odtRtf.end());
+    CheckWin(reloaded && again == L"Visit the site today." && odtSaved.find("example.com/docs") != std::string::npos,
+             "link survives an ODT round trip", "\"%s\"", U8(again).c_str());
 
     // Plain URLs are detected automatically.
     NewDoc();
@@ -1006,6 +1129,17 @@ void TestHyperlinks()
     Pump(100);
     CHARFORMAT2W cf = CharFormatAt(8, 12);
     CheckWin((cf.dwMask & CFM_LINK) && (cf.dwEffects & CFE_LINK), "typed URLs become links");
+    CHARRANGE typed = { 4, 23 };
+    std::wstring typedTarget = Editor_LinkTarget(typed);
+    Check(typedTarget == L"https://example.org", "address of a typed URL", "%s", U8(typedTarget).c_str());
+    HoverChar(10);
+    std::wstring typedHint = StatusBar_GetText();
+    HoverChar(1);
+    std::wstring typedLeft = StatusBar_GetText();
+    CheckWin(typedHint.find(L"https://example.org") != std::wstring::npos && typedLeft.find(L"example.org") == std::wstring::npos,
+             "status bar shows the address of a typed URL", "\"%s\" then \"%s\"", U8(typedHint).c_str(), U8(typedLeft).c_str());
+    SetCursorPos(savedCursor.x, savedCursor.y);
+    NewDoc();
 }
 
 } // namespace

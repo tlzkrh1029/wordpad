@@ -202,12 +202,39 @@ void CheckHorizontalScroll()
     }
 }
 
+// Link under the mouse pointer.  The control reports it (EN_LINK) while it handles WM_SETCURSOR and
+// WM_MOUSEMOVE; a mouse move without such a report means that the pointer has left the link.
+bool g_linkInCursor = false, g_linkInMove = false;
+std::wstring g_linkReported, g_linkShown;
+
+void UpdateLinkHint(HWND hwnd, bool onLink)
+{
+    std::wstring now = onLink ? g_linkReported : std::wstring();
+    if (now == g_linkShown) return;
+    g_linkShown = now;
+    if (!now.empty()) {
+        TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
+        TrackMouseEvent(&tme);
+    }
+    App_SetLinkHint(now);
+}
+
 LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR)
 {
     switch (msg) {
+    case WM_SETCURSOR: g_linkInCursor = false; break;
+    case WM_MOUSEMOVE: g_linkInMove = false; break;
+    case WM_MOUSELEAVE:
+        g_linkInCursor = g_linkInMove = false;
+        UpdateLinkHint(hwnd, false);
+        break;
+    case WM_RBUTTONDOWN:
+        App_ForgetContextLink();
+        break;
     case WM_CONTEXTMENU: {
         POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
         if (pt.x == -1 && pt.y == -1) {
+            App_ForgetContextLink();
             // Invoked from the keyboard: show the menu below the caret.
             CHARRANGE cr; Editor_GetSel(cr);
             POINTL p = {};
@@ -254,6 +281,8 @@ LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         break;
     case WM_MOUSEMOVE:
         if (wParam & MK_LBUTTON) CheckHorizontalScroll();
+        UpdateLinkHint(hwnd, g_linkInCursor || g_linkInMove);
+        g_linkInCursor = false;     // belongs to this mouse move only
         break;
     }
     return r;
@@ -522,26 +551,134 @@ bool Editor_HasSelection()
 bool Editor_IsModified() { return SendMessageW(g.hEdit, EM_GETMODIFY, 0, 0) != 0; }
 void Editor_SetModified(bool modified) { SendMessageW(g.hEdit, EM_SETMODIFY, modified ? TRUE : FALSE, 0); }
 
-std::wstring Editor_GetText(bool selectionOnly)
+std::wstring Editor_GetText(bool selectionOnly, bool visibleOnly)
 {
     std::wstring text;
+    LONG len;
     if (selectionOnly) {
         CHARRANGE cr; Editor_GetSel(cr);
-        LONG len = cr.cpMax - cr.cpMin;
-        if (len <= 0) return text;
-        text.resize((size_t)len + 1);
-        LRESULT n = SendMessageW(g.hEdit, EM_GETSELTEXT, 0, (LPARAM)&text[0]);
-        text.resize((size_t)std::max<LRESULT>(0, n));
+        len = cr.cpMax - cr.cpMin;
     } else {
-        LONG len = Editor_GetTextLength();
-        if (len <= 0) return text;
-        text.resize((size_t)len + 1);
-        GETTEXTEX gt = {};
-        gt.cb = (DWORD)((len + 1) * sizeof(wchar_t));
-        gt.flags = GT_DEFAULT;
-        gt.codepage = 1200;
-        LRESULT n = SendMessageW(g.hEdit, EM_GETTEXTEX, (WPARAM)&gt, (LPARAM)&text[0]);
-        text.resize((size_t)std::max<LRESULT>(0, n));
+        len = Editor_GetTextLength();
+    }
+    if (len <= 0) return text;
+    text.resize((size_t)len + 1);
+    GETTEXTEX gt = {};
+    gt.cb = (DWORD)((len + 1) * sizeof(wchar_t));
+    gt.flags = (selectionOnly ? GT_SELECTION : GT_DEFAULT) | (visibleOnly ? GT_NOHIDDENTEXT : 0);
+    gt.codepage = 1200;
+    LRESULT n = SendMessageW(g.hEdit, EM_GETTEXTEX, (WPARAM)&gt, (LPARAM)&text[0]);
+    text.resize((size_t)std::min<LRESULT>(std::max<LRESULT>(0, n), len));
+    return text;
+}
+
+std::wstring Editor_GetPlainText()
+{
+    std::wstring text;
+    GETTEXTLENGTHEX gtl = { GTL_USECRLF | GTL_PRECISE | GTL_NUMCHARS, 1200 };
+    LRESULT len = SendMessageW(g.hEdit, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
+    if (len <= 0) len = (LRESULT)Editor_GetTextLength() * 2;     // E_INVALIDARG: assume the worst case
+    if (len <= 0) return text;
+    text.resize((size_t)len + 1);
+    GETTEXTEX gt = {};
+    gt.cb = (DWORD)((len + 1) * sizeof(wchar_t));
+    gt.flags = GT_USECRLF | GT_NOHIDDENTEXT;
+    gt.codepage = 1200;
+    LRESULT n = SendMessageW(g.hEdit, EM_GETTEXTEX, (WPARAM)&gt, (LPARAM)&text[0]);
+    text.resize((size_t)std::min<LRESULT>(std::max<LRESULT>(0, n), len));
+    // Embedded objects have no textual representation.
+    text.erase(std::remove(text.begin(), text.end(), (wchar_t)0xFFFC), text.end());
+    return text;
+}
+
+// tomTrue, tomFalse, or tomUndefined when only a part of the range is hidden.
+static long HiddenState(LONG cpMin, LONG cpMax)
+{
+    long value = tomFalse;
+    if (cpMax <= cpMin) return value;
+    if (ITextDocument* doc = GetTextDocument()) {
+        ITextRange* range = nullptr;
+        if (SUCCEEDED(doc->Range(cpMin, cpMax, &range)) && range) {
+            ITextFont* font = nullptr;
+            if (SUCCEEDED(range->GetFont(&font)) && font) {
+                long v = tomFalse;
+                if (SUCCEEDED(font->GetHidden(&v)) && (v == tomTrue || v == tomUndefined)) value = v;
+                font->Release();
+            }
+            range->Release();
+        }
+        doc->Release();
+    }
+    return value;
+}
+
+bool Editor_IsRangeHidden(LONG cpMin, LONG cpMax)
+{
+    return HiddenState(cpMin, cpMax) != tomFalse;
+}
+
+namespace {
+
+std::wstring TextRange(LONG cpMin, LONG cpMax)
+{
+    std::wstring text;
+    if (cpMax <= cpMin) return text;
+    text.resize((size_t)(cpMax - cpMin) + 1);
+    TEXTRANGEW tr = { { cpMin, cpMax }, &text[0] };
+    LRESULT n = SendMessageW(g.hEdit, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+    text.resize((size_t)std::min<LRESULT>(std::max<LRESULT>(0, n), cpMax - cpMin));
+    return text;
+}
+
+// Extracts the address from a field instruction such as: HYPERLINK "https://example.com" \o "tip"
+bool ParseLinkInstruction(const std::wstring& text, size_t keyword, std::wstring& url)
+{
+    size_t p = keyword + 9;     // strlen("HYPERLINK")
+    while (p < text.size() && text[p] == L' ') ++p;
+    // Switches such as \l "bookmark" come with their own argument.
+    if (p < text.size() && text[p] == L'\\') return false;
+    if (p < text.size() && text[p] == L'"') {
+        size_t end = text.find(L'"', p + 1);
+        if (end == std::wstring::npos) return false;
+        url = text.substr(p + 1, end - p - 1);
+    } else {
+        size_t end = text.find(L' ', p);
+        url = text.substr(p, end == std::wstring::npos ? std::wstring::npos : end - p);
+    }
+    return !url.empty();
+}
+
+}
+
+void Editor_NoteLinkUnderMouse(UINT msg, const std::wstring& url)
+{
+    if (msg == WM_SETCURSOR) g_linkInCursor = true;
+    else if (msg == WM_MOUSEMOVE) g_linkInMove = true;
+    else return;
+    g_linkReported = url;
+}
+
+std::wstring Editor_LinkTarget(const CHARRANGE& range)
+{
+    // Depending on the kind of link, the control reports the address itself (automatically detected
+    // URLs and the address inside a field instruction), the whole field, or the visible name of the link.
+    std::wstring url;
+    LONG len = range.cpMax - range.cpMin;
+    if (len <= 0 || len > 4096) return url;
+    std::wstring text = TextRange(range.cpMin, range.cpMax);
+    static const wchar_t kKeyword[] = L"HYPERLINK";
+    size_t start = text.find_first_not_of(L' ');
+    if (start != std::wstring::npos && text.compare(start, 9, kKeyword) == 0)
+        return ParseLinkInstruction(text, start, url) ? url : std::wstring();
+
+    // The visible name of a link: the instruction is the hidden text right in front of it.
+    if (HiddenState(range.cpMin, range.cpMin + 1) == tomFalse) {
+        LONG from = std::max<LONG>(0, range.cpMin - 2200);
+        std::wstring before = TextRange(from, range.cpMin);
+        for (size_t k = before.find(kKeyword); k != std::wstring::npos; k = before.find(kKeyword, k + 1)) {
+            if (HiddenState(from + (LONG)k, range.cpMin) != tomTrue) continue;
+            return ParseLinkInstruction(before, k, url) ? url : std::wstring();
+        }
     }
     return text;
 }
@@ -831,23 +968,36 @@ int Editor_OriginX()
 
 // ---- searching ---------------------------------------------------------------
 
+// EM_FINDTEXTEX also looks into hidden text (the address part of a link, for example).  A match the
+// user cannot see would select "nothing", so such matches are skipped.
+static bool FindVisible(const std::wstring& what, WPARAM flags, LONG from, LONG to, CHARRANGE& found)
+{
+    bool down = (flags & FR_DOWN) != 0;
+    FINDTEXTEXW ft = {};
+    ft.lpstrText = what.c_str();
+    ft.chrg.cpMin = from;
+    ft.chrg.cpMax = to;
+    for (;;) {
+        if (SendMessageW(g.hEdit, EM_FINDTEXTEXW, flags, (LPARAM)&ft) < 0) return false;
+        if (ft.chrgText.cpMax <= ft.chrgText.cpMin) return false;
+        if (!Editor_IsRangeHidden(ft.chrgText.cpMin, ft.chrgText.cpMax)) { found = ft.chrgText; return true; }
+        LONG next = down ? ft.chrgText.cpMin + 1 : ft.chrgText.cpMax - 1;
+        if (down ? next <= ft.chrg.cpMin : next >= ft.chrg.cpMin) return false;    // no progress
+        ft.chrg.cpMin = next;
+    }
+}
+
 bool Editor_Find(const std::wstring& what, bool matchCase, bool wholeWord, bool down, bool wrapAround)
 {
     if (what.empty()) return false;
     CHARRANGE sel; Editor_GetSel(sel);
     WPARAM flags = (matchCase ? FR_MATCHCASE : 0) | (wholeWord ? FR_WHOLEWORD : 0) | (down ? FR_DOWN : 0);
-    FINDTEXTEXW ft = {};
-    ft.lpstrText = what.c_str();
-    if (down) { ft.chrg.cpMin = sel.cpMax; ft.chrg.cpMax = -1; }
-    else      { ft.chrg.cpMin = sel.cpMin; ft.chrg.cpMax = 0; }
-    LRESULT pos = SendMessageW(g.hEdit, EM_FINDTEXTEXW, flags, (LPARAM)&ft);
-    if (pos < 0 && wrapAround) {
-        if (down) { ft.chrg.cpMin = 0; ft.chrg.cpMax = -1; }
-        else      { ft.chrg.cpMin = Editor_GetTextLength(); ft.chrg.cpMax = 0; }
-        pos = SendMessageW(g.hEdit, EM_FINDTEXTEXW, flags, (LPARAM)&ft);
-    }
-    if (pos < 0) return false;
-    SendMessageW(g.hEdit, EM_EXSETSEL, 0, (LPARAM)&ft.chrgText);
+    CHARRANGE found = {};
+    bool ok = down ? FindVisible(what, flags, sel.cpMax, -1, found) : FindVisible(what, flags, sel.cpMin, 0, found);
+    if (!ok && wrapAround)
+        ok = down ? FindVisible(what, flags, 0, -1, found) : FindVisible(what, flags, Editor_GetTextLength(), 0, found);
+    if (!ok) return false;
+    SendMessageW(g.hEdit, EM_EXSETSEL, 0, (LPARAM)&found);
     SendMessageW(g.hEdit, EM_SCROLLCARET, 0, 0);
     return true;
 }
@@ -876,19 +1026,17 @@ int Editor_ReplaceAll(const std::wstring& what, const std::wstring& with, bool m
     SendMessageW(g.hEdit, WM_SETREDRAW, FALSE, 0);
     Editor_BeginUndoGroup();
     for (;;) {
-        FINDTEXTEXW ft = {};
-        ft.lpstrText = what.c_str();
-        ft.chrg.cpMin = pos;
-        ft.chrg.cpMax = -1;
-        if (SendMessageW(g.hEdit, EM_FINDTEXTEXW, flags, (LPARAM)&ft) < 0) break;
-        if (ft.chrgText.cpMax <= ft.chrgText.cpMin) break;
-        SendMessageW(g.hEdit, EM_EXSETSEL, 0, (LPARAM)&ft.chrgText);
+        CHARRANGE found = {};
+        if (!FindVisible(what, flags, pos, -1, found)) break;
+        SendMessageW(g.hEdit, EM_EXSETSEL, 0, (LPARAM)&found);
         LONG before = Editor_GetTextLength();
         Editor_ReplaceSel(with.c_str(), true);
         LONG after = Editor_GetTextLength();
-        pos = ft.chrgText.cpMax + (after - before);
-        if (pos < ft.chrgText.cpMin) pos = ft.chrgText.cpMin;
-        ++count;
+        pos = found.cpMax + (after - before);
+        if (pos < found.cpMin) pos = found.cpMin;
+        // Protected text cannot be replaced: the match then simply stays selected, and is not counted.
+        CHARRANGE now; Editor_GetSel(now);
+        if (now.cpMin == now.cpMax) ++count;
     }
     Editor_EndUndoGroup();
     LONG len = Editor_GetTextLength();

@@ -292,6 +292,16 @@ void StatusBar_SetParts(const std::vector<std::wstring>& parts)
     if (s.hwnd) InvalidateRect(s.hwnd, nullptr, FALSE);
 }
 
+std::wstring StatusBar_GetText()
+{
+    std::wstring text;
+    for (const std::wstring& part : s.parts) {
+        if (!text.empty()) text += L" | ";
+        text += part;
+    }
+    return text;
+}
+
 void StatusBar_SetZoom(int percent)
 {
     if (percent == s.zoom) return;

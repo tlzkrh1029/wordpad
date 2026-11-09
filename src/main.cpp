@@ -259,12 +259,32 @@ const FileType kPictureTypes[] = {
     { S_FILTER_IMAGES, L"*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.tif;*.tiff;*.ico" }, { S_FILTER_ALL, L"*.*" } };
 
 // ---------------------------------------------------------------------------
+// Links
+// ---------------------------------------------------------------------------
+std::wstring g_linkHint;        // address of the link under the mouse pointer
+std::wstring g_contextLink;     // address of the link that was right-clicked
+std::wstring g_clickedLink;     // address of the link that was Ctrl+clicked
+LinkTestHook g_linkTestHook = nullptr;
+
+// Only well-known, non-executable schemes are handed to the shell.  Returns the address to open, or
+// an empty string for anything else (file paths, scripts, bookmarks inside the document, ...).
+std::wstring OpenableLink(const std::wstring& url)
+{
+    static const wchar_t* const kSchemes[] = { L"http://", L"https://", L"mailto:", L"ftp://" };
+    for (const wchar_t* s : kSchemes)
+        if (_wcsnicmp(url.c_str(), s, wcslen(s)) == 0) return url;
+    if (_wcsnicmp(url.c_str(), L"www.", 4) == 0) return L"https://" + url;
+    return std::wstring();
+}
+
+// ---------------------------------------------------------------------------
 // Status bar text
 // ---------------------------------------------------------------------------
 void Recount()
 {
-    // Characters without paragraph marks, and white-space separated words.
-    std::wstring text = Editor_GetText(false);
+    // Characters without paragraph marks, and white-space separated words.  Hidden text (the address
+    // part of a link) is not counted.
+    std::wstring text = Editor_GetText(false, true);
     long long chars = 0, words = 0;
     bool inWord = false;
     for (wchar_t c : text) {
@@ -285,6 +305,14 @@ void UpdateStatus()
     LONG line = (LONG)SendMessageW(g.hEdit, EM_EXLINEFROMCHAR, 0, cr.cpMin);
     LONG lineStart = (LONG)SendMessageW(g.hEdit, EM_LINEINDEX, (WPARAM)line, 0);
     std::vector<std::wstring> parts;
+    if (!g_linkHint.empty()) {
+        // While the pointer rests on a link the status bar tells where it leads.
+        std::wstring shown = g_linkHint.size() > 300 ? g_linkHint.substr(0, 300) + L"\x2026" : g_linkHint;
+        parts.push_back(Fmt(S(OpenableLink(g_linkHint).empty() ? S_STATUS_LINK : S_STATUS_LINKOPEN), shown.c_str()));
+        StatusBar_SetParts(parts);
+        StatusBar_SetZoom(Editor_GetZoom());
+        return;
+    }
     parts.push_back(Fmt(S(S_STATUS_LINECOL), line + 1, std::max<LONG>(0, cr.cpMin - lineStart) + 1));
     if (g_wordCount >= 0) parts.push_back(Fmt(S(S_STATUS_WORDS), FormatNumber(g_wordCount).c_str()));
     parts.push_back(Fmt(S(S_STATUS_CHARS), FormatNumber(g_charCount).c_str()));
@@ -418,16 +446,48 @@ void DoAssociate()
 
 void OpenLink(const std::wstring& url)
 {
-    // Only well-known, non-executable schemes are handed to the shell.
-    static const wchar_t* const kSchemes[] = { L"http://", L"https://", L"mailto:", L"ftp://" };
-    for (const wchar_t* s : kSchemes) {
-        if (_wcsnicmp(url.c_str(), s, wcslen(s)) == 0) {
-            ShellExecuteW(g.hMain, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-            return;
+    std::wstring target = OpenableLink(url);
+    if (!target.empty()) ShellExecuteW(g.hMain, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
+void CopyTextToClipboard(const std::wstring& text)
+{
+    if (!OpenClipboard(g.hMain)) return;
+    EmptyClipboard();
+    size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+    if (HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, bytes)) {
+        if (void* p = GlobalLock(mem)) {
+            memcpy(p, text.c_str(), bytes);
+            GlobalUnlock(mem);
+            if (!SetClipboardData(CF_UNICODETEXT, mem)) GlobalFree(mem);
+        } else {
+            GlobalFree(mem);
         }
     }
-    if (_wcsnicmp(url.c_str(), L"www.", 4) == 0)
-        ShellExecuteW(g.hMain, L"open", (L"https://" + url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    CloseClipboard();
+}
+
+void OnEditLink(const ENLINK& link)
+{
+    std::wstring url = Editor_LinkTarget(link.chrg);
+    if (g_linkTestHook) { g_linkTestHook(link.msg, link.chrg, url); return; }
+    switch (link.msg) {
+    case WM_SETCURSOR:
+    case WM_MOUSEMOVE:
+        Editor_NoteLinkUnderMouse(link.msg, url);
+        break;
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+        g_contextLink = url;
+        break;
+    case WM_LBUTTONUP:
+        // The link is opened after the control has finished processing the click.
+        if (GetKeyState(VK_CONTROL) < 0 && !OpenableLink(url).empty()) {
+            g_clickedLink = url;
+            PostMessageW(g.hMain, WM_APP_OPENLINK, 0, 0);
+        }
+        break;
+    }
 }
 
 void SetZoomFromUi(int percent)
@@ -517,18 +577,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (hdr->code == EN_SELCHANGE) {
                 PostUpdateUI();
             } else if (hdr->code == EN_LINK) {
-                ENLINK* link = (ENLINK*)lParam;
-                if (link->msg == WM_LBUTTONUP && GetKeyState(VK_CONTROL) < 0) {
-                    LONG len = link->chrg.cpMax - link->chrg.cpMin;
-                    if (len > 0 && len < 2048) {
-                        std::wstring url((size_t)len + 1, L'\0');
-                        TEXTRANGEW tr = { link->chrg, &url[0] };
-                        LRESULT n = SendMessageW(g.hEdit, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-                        url.resize((size_t)std::max<LRESULT>(0, n));
-                        OpenLink(url);
-                        return 1;
-                    }
-                }
+                OnEditLink(*(ENLINK*)lParam);
             }
         }
         return 0;
@@ -565,6 +614,13 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_APP_UPDATEUI:
         App_UpdateUI();
         return 0;
+
+    case WM_APP_OPENLINK: {
+        std::wstring url;
+        url.swap(g_clickedLink);
+        OpenLink(url);
+        return 0;
+    }
 
     case WM_APP_ZOOMCHANGED:
         StatusBar_SetZoom(Editor_GetZoom());
@@ -1172,9 +1228,24 @@ void App_ShowContextMenu(POINT pt)
         AddSep(menu);
         AddItem(menu, ID_EDIT_PICTURESIZE, S_EDIT_PICTURESIZE);
     }
+    if (!g_contextLink.empty()) {
+        AddSep(menu);
+        if (!OpenableLink(g_contextLink).empty()) AddItem(menu, ID_EDIT_OPENLINK, S_CTX_OPENLINK);
+        AddItem(menu, ID_EDIT_COPYLINK, S_CTX_COPYLINK);
+    }
     TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, g.hMain, nullptr);
     DestroyMenu(menu);
 }
+
+void App_SetLinkHint(const std::wstring& url)
+{
+    if (url == g_linkHint) return;
+    g_linkHint = url;
+    UpdateStatus();
+}
+
+void App_ForgetContextLink() { g_contextLink.clear(); }
+void App_SetLinkTestHook(LinkTestHook hook) { g_linkTestHook = hook; }
 
 void App_OnCommand(int id)
 {
@@ -1236,6 +1307,8 @@ void App_OnCommand(int id)
     case ID_EDIT_FINDNEXT: Dlg_FindNext(false); refocus = g.hFindDlg == nullptr; break;
     case ID_EDIT_FINDPREV: Dlg_FindNext(true); refocus = g.hFindDlg == nullptr; break;
     case ID_EDIT_PICTURESIZE: if (Editor_IsPictureSelected()) Dlg_PictureSize(g.hMain); break;
+    case ID_EDIT_OPENLINK: OpenLink(g_contextLink); break;
+    case ID_EDIT_COPYLINK: if (!g_contextLink.empty()) CopyTextToClipboard(g_contextLink); break;
 
     // ---- View ----
     case ID_VIEW_ZOOMIN: SetZoomFromUi((Editor_GetZoom() / 10 + 1) * 10); break;
